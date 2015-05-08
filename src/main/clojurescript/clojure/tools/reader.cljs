@@ -16,8 +16,10 @@
              [read-char reader-error unread peek-char indexing-reader?
               get-line-number get-column-number get-file-name string-push-back-reader
               log-source]]
-            [clojure.tools.reader.impl.utils :refer :all] ;; [char ex-info? whitespace? numeric? desugar-meta]
-            [clojure.tools.reader.impl.commons :refer :all]
+            [clojure.tools.reader.impl.utils :refer
+             [char ex-info? whitespace? numeric? desugar-meta]]
+            [clojure.tools.reader.impl.commons :refer
+             [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
             [clojure.tools.reader.default-data-readers :as data-readers])
   (:import (clojure.lang PersistentHashSet IMeta
                          RT Symbol Reflector Var IObj

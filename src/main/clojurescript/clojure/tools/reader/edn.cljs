@@ -15,7 +15,8 @@
               get-line-number get-column-number get-file-name string-push-back-reader]]
             [clojure.tools.reader.impl.utils :refer
              [char ex-info? whitespace? numeric? desugar-meta]]
-            [clojure.tools.reader.impl.commons :refer :all]
+            [clojure.tools.reader.impl.commons :refer
+             [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
             [clojure.tools.reader :refer [default-data-readers]])
   (:import (clojure.lang PersistentHashSet IMeta RT PersistentVector)))
 
