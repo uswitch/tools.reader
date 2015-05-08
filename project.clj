@@ -7,11 +7,20 @@
   :source-paths ["src/main/clojure"]
   :test-paths ["src/test/clojure"]
   :repositories {"sonatype-oss-public" "https://oss.sonatype.org/content/groups/public/"}
-  :dependencies [[org.clojure/clojure "1.7.0-master-SNAPSHOT"]]
+  :dependencies [[org.clojure/clojure "1.7.0-master-SNAPSHOT"]
+                 [org.clojure/clojurescript "0.0-3211"]]
+  :plugins [[lein-cljsbuild "1.0.5"]]
   :profiles {:1.4 {:dependencies [[org.clojure/clojure "1.4.0"]]}
              :1.5 {:dependencies [[org.clojure/clojure "1.5.1"]]}
              :1.6 {:dependencies [[org.clojure/clojure "1.6.0"]]}
-             :1.7 {:dependencies [[org.clojure/clojure "1.7.0-master-SNAPSHOT"]]}}
+             :1.7 {:dependencies [[org.clojure/clojure "1.7.0-master-SNAPSHOT"]]}
+             :dev {:plugins [[com.cemerick/austin "0.1.6"]]}}
   :aliases {"test-all" ["with-profile" "test,1.4:test,1.5:test,1.6:test,1.7" "test"]
             "check-all" ["with-profile" "1.4:1.5:1.6:1.7" "check"]}
-  :min-lein-version "2.0.0")
+  :min-lein-version "2.0.0"
+  :cljsbuild {:builds [{:id "dev"
+                        :source-paths ["src/main/clojurescript"]
+                        :compiler {:output-to "target/out/main.js"
+                                   :output-dir "target/out"
+                                   :optimizations :whitespace
+                                   :pretty-print true}}]})
