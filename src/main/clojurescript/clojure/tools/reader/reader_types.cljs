@@ -10,12 +10,11 @@
       :author "Bronsa"}
   clojure.tools.reader.reader-types
   (:refer-clojure :exclude [char read-line])
-  (:require-macros [clojure.tools.reader.impl.utils :refer [compile-if]])
+  (:require-macros
+   [clojure.tools.reader.impl.utils :refer [compile-if]]
+   [clojure.tools.reader.reader-types :refer [update!]])
   (:require [clojure.tools.reader.impl.utils :refer
              [char whitespace? newline? >=clojure-1-5-alpha*? make-var]]))
-
-(defmacro ^:private update! [what f]
-  (list 'set! what (list f what)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reader protocols
@@ -339,15 +338,6 @@ logging frames. Called when pushing a character back."
 (defn source-logging-reader?
   [rdr]
   (instance? SourceLoggingPushbackReader rdr))
-
-(defmacro log-source
-  "If reader is a SourceLoggingPushbackReader, execute body in a source
-  logging context. Otherwise, execute body, returning the result."
-  [reader & body]
-  `(if (and (source-logging-reader? ~reader)
-            (not (whitespace? (peek-char ~reader))))
-     (log-source* ~reader (^:once fn* [] ~@body))
-     (do ~@body)))
 
 (defn line-start?
   "Returns true if rdr is an IndexingReader and the current char starts a new line"

@@ -9,21 +9,12 @@
 ;;; copied from clojure.instant and clojure.uuid ;;;
 
 (ns ^:skip-wiki clojure.tools.reader.default-data-readers
+    (:require-macros
+     [clojure.tools.reader.default-data-readers :refer [fail verify]])
   #_(:import [java.util Calendar Date GregorianCalendar TimeZone]
            [java.sql Timestamp]))
 
 ;;; clojure.instant ;;;
-
-;;; ------------------------------------------------------------------------
-;;; convenience macros
-
-(defmacro ^:private fail
-  [msg]
-  `(throw (RuntimeException. ~msg)))
-
-(defmacro ^:private verify
-  ([test msg] `(when-not ~test (fail ~msg)))
-  ([test] `(verify ~test ~(str "failed: " (pr-str test)))))
 
 (defn- divisible?
   [num div]
