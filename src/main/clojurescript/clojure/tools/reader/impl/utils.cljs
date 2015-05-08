@@ -7,7 +7,8 @@
 ;;   You must not remove this notice, or any other, from this software.
 
 (ns ^:skip-wiki clojure.tools.reader.impl.utils
-  (:refer-clojure :exclude [char]))
+    (:refer-clojure :exclude [char])
+    (:require-macros [clojure.tools.reader.impl.utils :refer [compile-if]]))
 
 (defn char [x]
   (when x
@@ -32,10 +33,6 @@
              (<= (read-string (subs qualifier (dec (count qualifier))))
                 5)))))
 
-(defmacro compile-if [cond then & [else]]
-  (if (eval cond)
-    then
-    else))
 
 (defn ex-info? [ex]
   (instance? clojure.lang.ExceptionInfo ex))
@@ -55,8 +52,8 @@
       [tag form]
       (clojure.tools.reader.impl.utils.TaggedLiteral. tag form))
 
-    (ns-unmap *ns* '->TaggedLiteral)
-    (ns-unmap *ns* 'map->TaggedLiteral)
+    ;; (ns-unmap *ns* '->TaggedLiteral)
+    ;; (ns-unmap *ns* 'map->TaggedLiteral)
 
     (defmethod print-method clojure.tools.reader.impl.utils.TaggedLiteral [o ^java.io.Writer w]
       (.write w "#")
@@ -65,8 +62,8 @@
       (print-method (:form o) w))
 
     (defrecord ReaderConditional [splicing? form])
-    (ns-unmap *ns* '->ReaderConditional)
-    (ns-unmap *ns* 'map->ReaderConditional)
+    ;; (ns-unmap *ns* '->ReaderConditional)
+    ;; (ns-unmap *ns* 'map->ReaderConditional)
 
     (defn reader-conditional?
       "Return true if the value is the data representation of a reader conditional"

@@ -10,7 +10,7 @@
   (:refer-clojure :exclude [char])
   (:require [clojure.tools.reader.reader-types :refer [peek-char read-char reader-error]]
             [clojure.tools.reader.impl.utils :refer [numeric? newline? char]])
-  (:import (clojure.lang BigInt Numbers)
+  #_(:import (clojure.lang BigInt Numbers)
            (java.util.regex Pattern Matcher)
            java.lang.reflect.Constructor))
 

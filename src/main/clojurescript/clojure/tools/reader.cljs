@@ -12,16 +12,16 @@
   (:refer-clojure :exclude [read read-line read-string char
                             default-data-readers *default-data-reader-fn*
                             *read-eval* *data-readers* *suppress-read*])
+  (:require-macros [clojure.tools.reader.reader-types :refer [log-source]])
   (:require [clojure.tools.reader.reader-types :refer
              [read-char reader-error unread peek-char indexing-reader?
-              get-line-number get-column-number get-file-name string-push-back-reader
-              log-source]]
+              get-line-number get-column-number get-file-name string-push-back-reader]]
             [clojure.tools.reader.impl.utils :refer
              [char ex-info? whitespace? numeric? desugar-meta]]
             [clojure.tools.reader.impl.commons :refer
              [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
             [clojure.tools.reader.default-data-readers :as data-readers])
-  (:import (clojure.lang PersistentHashSet IMeta
+  #_(:import (clojure.lang PersistentHashSet IMeta
                          RT Symbol Reflector Var IObj
                          PersistentVector IRecord Namespace)
            java.lang.reflect.Constructor

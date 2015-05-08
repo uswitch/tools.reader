@@ -18,7 +18,7 @@
             [clojure.tools.reader.impl.commons :refer
              [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
             [clojure.tools.reader :refer [default-data-readers]])
-  (:import (clojure.lang PersistentHashSet IMeta RT PersistentVector)))
+  #_(:import (clojure.lang PersistentHashSet IMeta RT PersistentVector)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; helpers

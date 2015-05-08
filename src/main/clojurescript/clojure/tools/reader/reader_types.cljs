@@ -10,10 +10,9 @@
       :author "Bronsa"}
   clojure.tools.reader.reader-types
   (:refer-clojure :exclude [char read-line])
+  (:require-macros [clojure.tools.reader.impl.utils :refer [compile-if]])
   (:require [clojure.tools.reader.impl.utils :refer
-             [char whitespace? newline? compile-if >=clojure-1-5-alpha*? make-var]])
-  (:import clojure.lang.LineNumberingPushbackReader
-           (java.io InputStream BufferedReader)))
+             [char whitespace? newline? >=clojure-1-5-alpha*? make-var]]))
 
 (defmacro ^:private update! [what f]
   (list 'set! what (list f what)))
