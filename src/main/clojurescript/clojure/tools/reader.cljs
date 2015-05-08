@@ -19,8 +19,7 @@
             [clojure.tools.reader.impl.utils :refer
              [char ex-info? whitespace? numeric? desugar-meta]]
             [clojure.tools.reader.impl.commons :refer
-             [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
-            [clojure.tools.reader.default-data-readers :as data-readers])
+             [number-literal? read-past match-number parse-symbol read-comment throwing-reader]])
   (:import (clojure.lang PersistentHashSet IMeta
                          RT Symbol Reflector Var IObj
                          PersistentVector IRecord Namespace)
@@ -36,8 +35,7 @@
          ^:dynamic *read-eval*
          ^:dynamic *data-readers*
          ^:dynamic *default-data-reader-fn*
-         ^:dynamic *suppress-read*
-         default-data-readers)
+         ^:dynamic *suppress-read*)
 
 (defn ^:private ns-name* [x]
   (if (instance? Namespace x)
@@ -809,8 +807,7 @@
       (reader-error rdr "Reader tag must be a symbol"))
     (if *suppress-read*
       (tagged-literal tag (read* rdr true nil opts pending-forms))
-      (if-let [f (or (*data-readers* tag)
-                     (default-data-readers tag))]
+      (if-let [f (*data-readers* tag)]
         (f (read* rdr true nil opts pending-forms))
         (if (.contains (name tag) ".")
           (read-ctor rdr tag opts pending-forms)
@@ -843,8 +840,7 @@
 (def ^:dynamic *data-readers*
   "Map from reader tag symbols to data reader Vars.
    Reader tags without namespace qualifiers are reserved for Clojure.
-   Default reader tags are defined in clojure.tools.reader/default-data-readers
-   and may be overridden by binding this Var."
+   There are no default reader tags."
   {})
 
 (def ^:dynamic *default-data-reader-fn*
@@ -855,12 +851,6 @@
   nil)
 
 (def ^:dynamic *suppress-read* false)
-
-(def default-data-readers
-  "Default map of data reader functions provided by Clojure.
-   May be overridden by binding *data-readers*"
-  {'inst #'data-readers/read-instant-date
-   'uuid #'data-readers/default-uuid-reader})
 
 (defn ^:private read*
   ([reader eof-error? sentinel opts pending-forms]
