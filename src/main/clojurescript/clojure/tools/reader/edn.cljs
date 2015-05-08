@@ -20,6 +20,34 @@
             [clojure.tools.reader :refer [default-data-readers]])
   #_(:import (clojure.lang PersistentHashSet IMeta RT PersistentVector)))
 
+(def Exception js/Error)
+
+(defn ^{:jsdoc ["@constructor"]}
+  IllegalArgumentException
+  ([message] (IllegalArgumentException message nil nil))
+  ([message data cause]
+   (let [e (js/Error.)]
+     (this-as this
+              (set! (.-message this) message)
+              (set! (.-data this) data)
+              (set! (.-cause this) cause)
+              (do
+                (set! (.-name this) (.-name e))
+                ;; non-standard
+                (set! (.-description this) (.-description e))
+                (set! (.-number this) (.-number e))
+                (set! (.-fileName this) (.-fileName e))
+                (set! (.-lineNumber this) (.-lineNumber e))
+                (set! (.-columnNumber this) (.-columnNumber e))
+                (set! (.-stack this) (.-stack e)))
+              this))))
+
+(set! (.. IllegalArgumentException -prototype -__proto__) js/Error.prototype)
+
+(set! (.. IllegalArgumentException -prototype -toString)
+  (fn []
+    (this-as this (pr-str* this))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; helpers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -84,32 +112,32 @@
   ([^String token offset length base]
      (let [l (+ offset length)]
        (when-not (== (count token) l)
-         (throw (IllegalArgumentException. (str "Invalid unicode character: \\" token))))
+         (throw (IllegalArgumentException (str "Invalid unicode character: \\" token))))
        (loop [i offset uc 0]
          (if (== i l)
            (char uc)
            (let [d (Character/digit (int (nth token i)) (int base))]
              (if (== d -1)
-               (throw (IllegalArgumentException. (str "Invalid digit: " (nth token i))))
+               (throw (IllegalArgumentException (str "Invalid digit: " (nth token i))))
                (recur (inc i) (long (+ d (* uc base))))))))))
 
   ([rdr initch base length exact?]
      (loop [i 1 uc (Character/digit (int initch) (int base))]
        (if (== uc -1)
-         (throw (IllegalArgumentException. (str "Invalid digit: " initch)))
+         (throw (IllegalArgumentException (str "Invalid digit: " initch)))
          (if-not (== i length)
            (let [ch (peek-char rdr)]
              (if (or (whitespace? ch)
                      (macros ch)
                      (nil? ch))
                (if exact?
-                 (throw (IllegalArgumentException.
+                 (throw (IllegalArgumentException
                          (str "Invalid character length: " i ", should be: " length)))
                  (char uc))
                (let [d (Character/digit (int ch) (int base))]
                  (read-char rdr)
                  (if (== d -1)
-                   (throw (IllegalArgumentException. (str "Invalid digit: " ch)))
+                   (throw (IllegalArgumentException (str "Invalid digit: " ch)))
                    (recur (inc i) (long (+ d (* uc base))))))))
            (char uc))))))
 
