@@ -10,43 +10,25 @@
       :author "Bronsa"}
   clojure.tools.reader.edn
   (:refer-clojure :exclude [read read-string char default-data-readers])
-  (:require [clojure.tools.reader.reader-types :refer
-             [read-char reader-error unread peek-char indexing-reader?
-              get-line-number get-column-number get-file-name string-push-back-reader]]
-            [clojure.tools.reader.impl.utils :refer
-             [char ex-info? whitespace? numeric? desugar-meta]]
-            [clojure.tools.reader.impl.commons :refer
-             [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
-            [clojure.tools.reader :refer [default-data-readers]])
+  (:require
+   [clojure.tools.reader.reader-types :refer
+    [read-char reader-error unread peek-char indexing-reader?
+     get-line-number get-column-number get-file-name string-push-back-reader]]
+   [clojure.tools.reader.impl.utils :refer
+    [char ex-info? whitespace? numeric? desugar-meta]]
+   [clojure.tools.reader.impl.commons :refer
+    [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
+   [clojure.tools.reader :refer [default-data-readers]]
+   [clojure.tools.reader.impl.core :refer
+    [Exception
+     IllegalArgumentException
+     persistent-hash-set-create-with-check
+     rt-map
+     integer-to-string
+     string-builder
+     persistent-list-create
+     ]])
   #_(:import (clojure.lang PersistentHashSet IMeta RT PersistentVector)))
-
-(def Exception js/Error)
-
-(defn ^{:jsdoc ["@constructor"]}
-  IllegalArgumentException
-  ([message] (IllegalArgumentException message nil nil))
-  ([message data cause]
-   (let [e (js/Error.)]
-     (this-as this
-              (set! (.-message this) message)
-              (set! (.-data this) data)
-              (set! (.-cause this) cause)
-              (do
-                (set! (.-name this) (.-name e))
-                ;; non-standard
-                (set! (.-description this) (.-description e))
-                (set! (.-number this) (.-number e))
-                (set! (.-fileName this) (.-fileName e))
-                (set! (.-lineNumber this) (.-lineNumber e))
-                (set! (.-columnNumber this) (.-columnNumber e))
-                (set! (.-stack this) (.-stack e)))
-              this))))
-
-(set! (.. IllegalArgumentException -prototype -__proto__) js/Error.prototype)
-
-(set! (.. IllegalArgumentException -prototype -toString)
-  (fn []
-    (this-as this (pr-str* this))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; helpers
@@ -78,7 +60,7 @@
       (reader-error rdr "Invalid leading character: " initch)
 
       :else
-      (loop [sb (StringBuilder.)
+      (loop [sb (string-builder)
              ch (do (unread rdr initch) initch)]
         (if (or (whitespace? ch)
                 (macro-terminating? ch)
@@ -170,7 +152,7 @@
                ic (int c)]
            (if (and (> ic upper-limit)
                     (< ic lower-limit))
-             (reader-error rdr "Invalid character constant: \\u" (Integer/toString ic 16))
+             (reader-error rdr "Invalid character constant: \\u" (integer-to-string ic 16))
              c))
 
          (.startsWith token "o")
@@ -209,7 +191,7 @@
   (let [the-list (read-delimited \) rdr opts)]
     (if (empty? the-list)
       '()
-      (clojure.lang.PersistentList/create the-list))))
+      (persistent-list-create the-list))))
 
 (defn- read-vector
   [rdr _ opts]
@@ -220,11 +202,11 @@
   (let [l (to-array (read-delimited \} rdr opts))]
     (when (== 1 (bit-and (alength l) 1))
       (reader-error rdr "Map literal must contain an even number of forms"))
-    (RT/map l)))
+    (rt-map l)))
 
 (defn- read-number
   [reader initch opts]
-  (loop [sb (doto (StringBuilder.) (.append initch))
+  (loop [sb (doto (string-builder) (.append initch))
          ch (read-char reader)]
     (if (or (whitespace? ch) (macros ch) (nil? ch))
       (let [s (str sb)]
@@ -256,7 +238,7 @@
 
 (defn- read-string*
   [reader _ opts]
-  (loop [sb (StringBuilder.)
+  (loop [sb (string-builder)
          ch (read-char reader)]
     (case ch
       nil (reader-error reader "EOF while reading string")
@@ -275,9 +257,9 @@
       "true" true
       "false" false
       "/" '/
-      "NaN" Double/NaN
-      "-Infinity" Double/NEGATIVE_INFINITY
-      ("Infinity" "+Infinity") Double/POSITIVE_INFINITY
+      "NaN" js/Number.NaN
+      "-Infinity" js/Number.NEGATIVE_INFINITY
+      ("Infinity" "+Infinity") js/Number.POSITIVE_INFINITY
 
       (or (when-let [p (parse-symbol token)]
             (symbol (p 0) (p 1)))
@@ -315,7 +297,7 @@
 
 (defn- read-set
   [rdr _ opts]
-  (PersistentHashSet/createWithCheck (read-delimited \} rdr opts)))
+  (persistent-hash-set-create-with-check (read-delimited \} rdr opts)))
 
 (defn- read-discard
   [rdr _ opts]
