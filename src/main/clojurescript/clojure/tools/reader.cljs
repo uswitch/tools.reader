@@ -19,8 +19,7 @@
             [clojure.tools.reader.impl.utils :refer
              [char ex-info? whitespace? numeric? desugar-meta]]
             [clojure.tools.reader.impl.commons :refer
-             [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
-            [clojure.tools.reader.default-data-readers :as data-readers])
+             [number-literal? read-past match-number parse-symbol read-comment throwing-reader]])
   #_(:import (clojure.lang PersistentHashSet IMeta
                          RT Symbol Reflector Var IObj
                          PersistentVector IRecord Namespace)
@@ -843,8 +842,8 @@
 (def ^:dynamic *data-readers*
   "Map from reader tag symbols to data reader Vars.
    Reader tags without namespace qualifiers are reserved for Clojure.
-   Default reader tags are defined in clojure.tools.reader/default-data-readers
-   and may be overridden by binding this Var."
+   This light version of tools.reader has no implementation for default
+   reader tags such as #inst and #uuid."
   {})
 
 (def ^:dynamic *default-data-reader-fn*
@@ -859,8 +858,7 @@
 (def default-data-readers
   "Default map of data reader functions provided by Clojure.
    May be overridden by binding *data-readers*"
-  {'inst #'data-readers/read-instant-date
-   'uuid #'data-readers/default-uuid-reader})
+  {})
 
 (defn ^:private read*
   ([reader eof-error? sentinel opts pending-forms]
