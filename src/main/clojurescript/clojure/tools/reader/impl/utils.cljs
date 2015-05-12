@@ -83,14 +83,14 @@
   "Checks whether a given character is whitespace"
   [ch]
   (when ch
-    (or (Character/isWhitespace ^Character ch)
+    (or (re-find #"\s" ch)
         (identical? \,  ch))))
 
 (defn numeric?
   "Checks whether a given character is numeric"
   [^Character ch]
   (when ch
-    (Character/isDigit ch)))
+    (re-find #"\d" ch)))
 
 (defn newline?
   "Checks whether the character is a newline"
