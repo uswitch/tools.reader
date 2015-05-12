@@ -13,18 +13,20 @@
                             default-data-readers *default-data-reader-fn*
                             *read-eval* *data-readers* *suppress-read*])
   (:require-macros [clojure.tools.reader.reader-types :refer [log-source]])
-  (:require [clojure.tools.reader.reader-types :refer
-             [read-char reader-error unread peek-char indexing-reader?
-              get-line-number get-column-number get-file-name string-push-back-reader]]
-            [clojure.tools.reader.impl.utils :refer
-             [char ex-info? whitespace? numeric? desugar-meta]]
-            [clojure.tools.reader.impl.commons :refer
-             [number-literal? read-past match-number parse-symbol read-comment throwing-reader]])
-  #_(:import (clojure.lang PersistentHashSet IMeta
-                         RT Symbol Reflector Var IObj
-                         PersistentVector IRecord Namespace)
-           java.lang.reflect.Constructor
-           (java.util regex.Pattern List LinkedList)))
+  (:require
+   [clojure.tools.reader.reader-types :refer
+    [read-char reader-error unread peek-char indexing-reader?
+     get-line-number get-column-number get-file-name string-push-back-reader]]
+   [clojure.tools.reader.impl.utils :refer
+    [char ex-info? whitespace? numeric? desugar-meta]]
+   [clojure.tools.reader.impl.commons :refer
+    [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
+   [clojure.tools.reader.impl.core :refer
+    [Exception IllegalArgumentException IllegalStateException
+     RuntimeException string-builder integer-to-string
+     persistent-list-create
+     persistent-hash-set-create-with-check
+     ]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; helpers
@@ -53,7 +55,7 @@
   [rdr initch]
   (if-not initch
     (reader-error rdr "EOF while reading")
-    (loop [sb (StringBuilder.) ch initch]
+    (loop [sb (string-builder) ch initch]
       (if (or (whitespace? ch)
               (macro-terminating? ch)
               (nil? ch))
@@ -82,10 +84,10 @@
 
 (defn read-regex
   [rdr ch opts pending-forms]
-  (let [sb (StringBuilder.)]
+  (let [sb (string-builder)]
     (loop [ch (read-char rdr)]
       (if (identical? \" ch)
-        (Pattern/compile (str sb))
+        (re-pattern (str sb))
         (if (nil? ch)
           (reader-error rdr "EOF while reading regex")
           (do
@@ -159,7 +161,7 @@
                ic (int c)]
            (if (and (> ic upper-limit)
                     (< ic lower-limit))
-             (reader-error rdr "Invalid character constant: \\u" (Integer/toString ic 16))
+             (reader-error rdr "Invalid character constant: \\u" (integer-to-string ic 16))
              c))
 
          (.startsWith token "o")
@@ -182,8 +184,8 @@
   (when (indexing-reader? rdr)
     [(get-line-number rdr) (get-column-number rdr)]))
 
-(defonce ^:private READ_EOF (Object.))
-(defonce ^:private READ_FINISHED (Object.))
+(defonce ^:private READ_EOF (js/Object.))
+(defonce ^:private READ_FINISHED (js/Object.))
 
 (defn- ^PersistentVector read-delimited
   "Reads and returns a collection ended with delim"
@@ -208,7 +210,7 @@
         [end-line end-column] (ending-line-col-info rdr)]
     (with-meta (if (empty? the-list)
                  '()
-                 (clojure.lang.PersistentList/create the-list))
+                 (persistent-list-create the-list))
       (when start-line
         (merge
          (when-let [file (get-file-name rdr)]
@@ -258,7 +260,7 @@
 
 (defn- read-number
   [rdr initch]
-  (loop [sb (doto (StringBuilder.) (.append initch))
+  (loop [sb (doto (string-builder) (.append initch))
          ch (read-char rdr)]
     (if (or (whitespace? ch) (macros ch) (nil? ch))
       (let [s (str sb)]
@@ -290,7 +292,7 @@
 
 (defn- read-string*
   [reader _ opts pending-forms]
-  (loop [sb (StringBuilder.)
+  (loop [sb (string-builder)
          ch (read-char reader)]
     (case ch
       nil (reader-error reader "EOF while reading string")
@@ -310,9 +312,9 @@
         "true" true
         "false" false
         "/" '/
-        "NaN" Double/NaN
-        "-Infinity" Double/NEGATIVE_INFINITY
-        ("Infinity" "+Infinity") Double/POSITIVE_INFINITY
+        "NaN" js/Number.NaN
+        "-Infinity" js/Number.NEGATIVE_INFINITY
+        ("Infinity" "+Infinity") js/Number.POSITIVE_INFINITY
 
         (or (when-let [p (parse-symbol token)]
               (with-meta (symbol (p 0) (p 1))
@@ -378,7 +380,7 @@
           (let [m (if (and line (seq? o))
                     (assoc m :line line :column column)
                     m)]
-            (if (instance? IObj o)
+            (if (instance? IWithMeta o)
               (with-meta o (merge (meta o) m))
               (reset-meta! o m)))
           (reader-error rdr "Metadata can only be applied to IMetas"))))))
@@ -388,7 +390,7 @@
   (let [[start-line start-column] (starting-line-col-info rdr)
         ;; subtract 1 from start-column so it includes the # in the leading #{
         start-column (if start-column (int (dec start-column)))
-        the-set (PersistentHashSet/createWithCheck (read-delimited \} rdr opts pending-forms))
+        the-set (persistent-hash-set-create-with-check (read-delimited \} rdr opts pending-forms))
         [end-line end-column] (ending-line-col-info rdr)]
     (with-meta the-set
       (when start-line
@@ -575,7 +577,9 @@
   [rdr _ opts pending-forms]
   (when-not *read-eval*
     (reader-error rdr "#= not allowed when *read-eval* is false"))
-  (eval (read* rdr true nil opts pending-forms)))
+  ;;(eval (read* rdr true nil opts pending-forms))
+  nil ;; there is no eval in cljs
+  )
 
 (def ^:private ^:dynamic gensym-env nil)
 
@@ -649,7 +653,7 @@
         (symbol (ns-name* *ns*) (name s))))))
 
 (defn- add-meta [form ret]
-  (if (and (instance? IObj form)
+  (if (and (instance? IWithMeta form)
            (seq (dissoc (meta form) :line :column :end-line :end-column :file :source)))
     (list 'clojure.core/with-meta ret (syntax-quote* (meta form)))
     ret))
@@ -671,6 +675,12 @@
   (if (>= (count coll) 16)
     'clojure.core/hash-map
     'clojure.core/array-map))
+
+
+(defn bool? [x]
+  (or (instance? js/Boolean x)
+      (true? x)
+      (false? x)))
 
 (defn- syntax-quote* [form]
   (->>
@@ -718,11 +728,11 @@
 
     (or (keyword? form)
         (number? form)
-        (char? form)
+        ;; (char? form) ;; no char type in cljs
         (string? form)
         (nil? form)
-        (instance? Boolean form)
-        (instance? Pattern form))
+        (bool? form)
+        (instance? js/RegExp form))
     form
 
     :else (list 'quote form))
@@ -928,8 +938,8 @@
   {:arglists '([] [reader] [opts reader] [reader eof-error? eof-value])}
   ([] (read *in* true nil))
   ([reader] (read reader true nil))
-  ([{eof :eof :as opts :or {eof :eofthrow}} reader] (read* reader (= eof :eofthrow) eof nil opts (LinkedList.)))
-  ([reader eof-error? sentinel] (read* reader eof-error? sentinel nil {} (LinkedList.))))
+  ([{eof :eof :as opts :or {eof :eofthrow}} reader] (read* reader (= eof :eofthrow) eof nil opts (list)))
+  ([reader eof-error? sentinel] (read* reader eof-error? sentinel nil {} (list))))
 
 (defn read-string
   "Reads one object from the string s.
@@ -948,9 +958,3 @@
   ([opts s]
      (when (and s (not (identical? s "")))
        (read opts (string-push-back-reader s)))))
-
-(defmacro syntax-quote
-  "Macro equivalent to the syntax-quote reader macro (`)."
-  [form]
-  (binding [gensym-env {}]
-    (syntax-quote* form)))
