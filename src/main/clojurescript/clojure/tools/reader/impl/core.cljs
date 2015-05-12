@@ -28,6 +28,52 @@
   (fn []
     (this-as this (pr-str* this))))
 
+(defn ^{:jsdoc ["@constructor"]}
+  RuntimeException
+  ([message]
+   (let [e (js/Error.)]
+     (this-as this
+              (set! (.-message this) message)
+              (do
+                (set! (.-name this) (.-name e))
+                ;; non-standard
+                (set! (.-description this) (.-description e))
+                (set! (.-number this) (.-number e))
+                (set! (.-fileName this) (.-fileName e))
+                (set! (.-lineNumber this) (.-lineNumber e))
+                (set! (.-columnNumber this) (.-columnNumber e))
+                (set! (.-stack this) (.-stack e)))
+              this))))
+
+(set! (.. RuntimeException -prototype -__proto__) js/Error.prototype)
+
+(set! (.. RuntimeException -prototype -toString)
+  (fn []
+    (this-as this (pr-str* this))))
+
+(defn ^{:jsdoc ["@constructor"]}
+  IllegalStateException
+  ([message]
+   (let [e (js/Error.)]
+     (this-as this
+              (set! (.-message this) message)
+              (do
+                (set! (.-name this) (.-name e))
+                ;; non-standard
+                (set! (.-description this) (.-description e))
+                (set! (.-number this) (.-number e))
+                (set! (.-fileName this) (.-fileName e))
+                (set! (.-lineNumber this) (.-lineNumber e))
+                (set! (.-columnNumber this) (.-columnNumber e))
+                (set! (.-stack this) (.-stack e)))
+              this))))
+
+(set! (.. IllegalStateException -prototype -__proto__) js/Error.prototype)
+
+(set! (.. IllegalStateException -prototype -toString)
+  (fn []
+    (this-as this (pr-str* this))))
+
 (defn persistent-hash-set-create-with-check
   ^:stub
   [coll]
