@@ -8,36 +8,34 @@
 
 (ns ^:skip-wiki clojure.tools.reader.impl.utils
     (:refer-clojure :exclude [char])
-    (:require-macros [clojure.tools.reader.impl.utils :refer [compile-if]]))
+    (:require-macros
+     [clojure.tools.reader.impl.utils :refer [compile-if]])
+    (:require
+     [clojure.string :as string]))
+
 
 (defn char [x]
   (when x
     (clojure.core/char x)))
 
 ;; getColumnNumber and *default-data-reader-fn* are available only since clojure-1.5.0-beta1
-(def >=clojure-1-5-alpha*?
-  (let [{:keys [minor qualifier]} *clojure-version*]
-    (or (and (= minor 5)
-             (not= "alpha"
-                   (when qualifier
-                     (subs qualifier 0 (dec (count qualifier))))))
-        (> minor 5))))
 
-(def <=clojure-1-7-alpha5
-  (let [{:keys [minor qualifier]} *clojure-version*]
-    (or (< minor 7)
-        (and (= minor 7)
-             (= "alpha"
-                (when qualifier
-                  (subs qualifier 0 (dec (count qualifier)))))
-             (<= (read-string (subs qualifier (dec (count qualifier))))
-                5)))))
+(defn cljs-version []
+  (let [[major minor] (string/split *clojurescript-version* #"\.")
+        [minor build] (string/split minor #"-")
+        [major minor build] (map #(js/parseInt %) [major minor build])]
+    {:major major
+     :minor minor
+     :build build}))
 
+(def pre-cljs-1243 (-> (cljs-version) :build (< 1243)))
 
 (defn ex-info? [ex]
   (instance? clojure.lang.ExceptionInfo ex))
 
-(compile-if <=clojure-1-7-alpha5
+#_(compile-if true ;pre-cljs-1243
+;;; tagged-literal type arrived in CLJS-1243
+
   (do
     (defrecord TaggedLiteral [tag form])
 
@@ -112,4 +110,4 @@
 (defn make-var
   "Returns an anonymous unbound Var"
   []
-  (with-local-vars [x nil] x))
+  (Var. nil nil nil))
