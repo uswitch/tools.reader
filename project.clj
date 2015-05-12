@@ -8,7 +8,7 @@
   :test-paths ["src/test/clojure"]
   :repositories {"sonatype-oss-public" "https://oss.sonatype.org/content/groups/public/"}
   :dependencies [[org.clojure/clojure "1.7.0-master-SNAPSHOT"]
-                 [org.clojure/clojurescript "0.0-3211"]]
+                 [org.clojure/clojurescript "0.0-3269"]]
   :plugins [[lein-cljsbuild "1.0.5"]]
   :profiles {:1.4 {:dependencies [[org.clojure/clojure "1.4.0"]]}
              :1.5 {:dependencies [[org.clojure/clojure "1.5.1"]]}
