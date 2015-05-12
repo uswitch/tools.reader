@@ -110,3 +110,9 @@
 (defn char-digit
   ^:stub
   [code-point radix])
+
+(def last-id (atom 0))
+(defn rt-next-id
+  ^:stub
+  []
+  (swap! last-id inc))

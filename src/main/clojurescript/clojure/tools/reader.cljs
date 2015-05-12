@@ -26,6 +26,8 @@
      RuntimeException string-builder integer-to-string
      persistent-list-create
      persistent-hash-set-create-with-check
+     rt-next-id
+     rt-map
      ]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -248,7 +250,7 @@
     (with-meta
       (if (zero? map-count)
         {}
-        (RT/map (to-array the-map)))
+        (rt-map (to-array the-map)))
       (when start-line
         (merge
          (when-let [file (get-file-name rdr)]
@@ -515,7 +517,7 @@
   "Get a symbol for an anonymous ?argument?"
   [n]
   (symbol (str (if (== -1 n) "rest" (str "p" n))
-               "__" (RT/nextID) "#")))
+               "__" (rt-next-id) "#")))
 
 (defn- read-fn
   [rdr _ opts pending-forms]
@@ -630,7 +632,7 @@
   (or (get gensym-env sym)
       (let [gs (symbol (str (subs (name sym)
                                   0 (dec (count (name sym))))
-                            "__" (RT/nextID) "__auto__"))]
+                            "__" (rt-next-id) "__auto__"))]
         (set! gensym-env (assoc gensym-env sym gs))
         gs)))
 
@@ -779,38 +781,40 @@
     \? read-cond
     nil))
 
-(defn- read-ctor [rdr class-name opts pending-forms]
-  (when-not *read-eval*
-    (reader-error "Record construction syntax can only be used when *read-eval* == true"))
-  (let [class (Class/forName (name class-name) false (RT/baseLoader))
-        ch (read-past whitespace? rdr)] ;; differs from clojure
-    (if-let [[end-ch form] (case ch
-                             \[ [\] :short]
-                             \{ [\} :extended]
-                             nil)]
-      (let [entries (to-array (read-delimited end-ch rdr opts pending-forms))
-            numargs (count entries)
-            all-ctors (.getConstructors class)
-            ctors-num (count all-ctors)]
-        (case form
-          :short
-          (loop [i 0]
-            (if (>= i ctors-num)
-              (reader-error rdr "Unexpected number of constructor arguments to " (str class)
-                            ": got" numargs)
-              (if (== (count (.getParameterTypes ^Constructor (aget all-ctors i)))
-                      numargs)
-                (Reflector/invokeConstructor class entries)
-                (recur (inc i)))))
-          :extended
-          (let [vals (RT/map entries)]
-            (loop [s (keys vals)]
-              (if s
-                (if-not (keyword? (first s))
-                  (reader-error rdr "Unreadable ctor form: key must be of type clojure.lang.Keyword")
-                  (recur (next s)))))
-            (Reflector/invokeStaticMethod class "create" (object-array [vals])))))
-      (reader-error rdr "Invalid reader constructor form"))))
+(comment
+  ;;; too much java in here, re-implement
+  (defn- read-ctor [rdr class-name opts pending-forms]
+   (when-not *read-eval*
+     (reader-error "Record construction syntax can only be used when *read-eval* == true"))
+   (let [class (Class/forName (name class-name) false (RT/baseLoader))
+         ch (read-past whitespace? rdr)] ;; differs from clojure
+     (if-let [[end-ch form] (case ch
+                              \[ [\] :short]
+                              \{ [\} :extended]
+                              nil)]
+       (let [entries (to-array (read-delimited end-ch rdr opts pending-forms))
+             numargs (count entries)
+             all-ctors (.getConstructors class)
+             ctors-num (count all-ctors)]
+         (case form
+           :short
+           (loop [i 0]
+             (if (>= i ctors-num)
+               (reader-error rdr "Unexpected number of constructor arguments to " (str class)
+                             ": got" numargs)
+               (if (== (count (.getParameterTypes ^Constructor (aget all-ctors i)))
+                       numargs)
+                 (Reflector/invokeConstructor class entries)
+                 (recur (inc i)))))
+           :extended
+           (let [vals (RT/map entries)]
+             (loop [s (keys vals)]
+               (if s
+                 (if-not (keyword? (first s))
+                   (reader-error rdr "Unreadable ctor form: key must be of type clojure.lang.Keyword")
+                   (recur (next s)))))
+             (Reflector/invokeStaticMethod class "create" (object-array [vals])))))
+       (reader-error rdr "Invalid reader constructor form")))))
 
 (defn- read-tagged [rdr initch opts pending-forms]
   (let [tag (read* rdr true nil opts pending-forms)]
@@ -822,7 +826,7 @@
                      (default-data-readers tag))]
         (f (read* rdr true nil opts pending-forms))
         (if (.contains (name tag) ".")
-          (read-ctor rdr tag opts pending-forms)
+          (comment (read-ctor rdr tag opts pending-forms))
           (if-let [f *default-data-reader-fn*]
             (f tag (read* rdr true nil opts pending-forms))
             (reader-error rdr "No reader function for tag " (name tag))))))))
