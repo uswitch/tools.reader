@@ -13,8 +13,10 @@
   (:require-macros
    [clojure.tools.reader.impl.utils :refer [compile-if]]
    [clojure.tools.reader.reader-types :refer [update!]])
-  (:require [clojure.tools.reader.impl.utils :refer
-             [char whitespace? newline? >=clojure-1-5-alpha*? make-var]]))
+  (:require
+   [clojure.tools.reader.impl.utils :refer
+    [char whitespace? newline? make-var]]
+   [clojure.tools.reader.impl.core :refer [RuntimeException]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reader protocols
@@ -43,7 +45,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (deftype StringReader
-    [^String s s-len ^:unsynchronized-mutable s-pos]
+    [s s-len ^:unsynchronized-mutable s-pos]
   Reader
   (read-char [reader]
     (when (> s-len s-pos)
@@ -54,26 +56,27 @@
     (when (> s-len s-pos)
       (nth s s-pos))))
 
-(deftype InputStreamReader [^InputStream is ^:unsynchronized-mutable ^"[B" buf]
-  Reader
-  (read-char [reader]
-    (if buf
-      (let [c (aget buf 0)]
-        (set! buf nil)
-        (char c))
-      (let [c (.read is)]
-        (when (>= c 0)
-          (char c)))))
-  (peek-char [reader]
-    (when-not buf
-      (set! buf (byte-array 1))
-      (when (== -1 (.read is buf))
-        (set! buf nil)))
-    (when buf
-      (char (aget buf 0)))))
+(comment
+  (deftype InputStreamReader [^InputStream is ^:unsynchronized-mutable ^"[B" buf]
+   Reader
+   (read-char [reader]
+     (if buf
+       (let [c (aget buf 0)]
+         (set! buf nil)
+         (char c))
+       (let [c (.read is)]
+         (when (>= c 0)
+           (char c)))))
+   (peek-char [reader]
+     (when-not buf
+       (set! buf (byte-array 1))
+       (when (== -1 (.read is buf))
+         (set! buf nil)))
+     (when buf
+       (char (aget buf 0))))))
 
 (deftype PushbackReader
-    [rdr ^"[Ljava.lang.Object;" buf buf-len ^:unsynchronized-mutable buf-pos]
+    [rdr buf buf-len ^:unsynchronized-mutable buf-pos]
   Reader
   (read-char [reader]
     (char
@@ -154,14 +157,12 @@
     (when c
       (.unread ^java.io.PushbackReader rdr (int c)))))
 
-(extend LineNumberingPushbackReader
+(extend-type LineNumberingPushbackReader
   IndexingReader
-  {:get-line-number (fn [rdr] (.getLineNumber ^LineNumberingPushbackReader rdr))
-   :get-column-number (compile-if >=clojure-1-5-alpha*?
-                        (fn [rdr]
-                          (.getColumnNumber ^LineNumberingPushbackReader rdr))
-                        (fn [rdr] 0))
-   :get-file-name (constantly nil)})
+  (get-line-number [rdr] (.getLineNumber ^LineNumberingPushbackReader rdr))
+  (get-column-number [rdr]
+    (.getColumnNumber ^LineNumberingPushbackReader rdr))
+  (get-file-name [_] nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Source Logging support
@@ -250,22 +251,18 @@ logging frames. Called when pushing a character back."
   "Returns true if the reader satisfies IndexingReader"
   [rdr]
   (or (instance? clojure.tools.reader.reader_types.IndexingReader rdr)
-      (instance? LineNumberingPushbackReader rdr)
-      (and (not (instance? clojure.tools.reader.reader_types.PushbackReader rdr))
-           (not (instance? clojure.tools.reader.reader_types.StringReader rdr))
-           (not (instance? clojure.tools.reader.reader_types.InputStreamReader rdr))
-           (get (:impls IndexingReader) (class rdr)))))
+      (instance? LineNumberingPushbackReader rdr)))
 
 (defn string-reader
   "Creates a StringReader from a given string"
-  ([^String s]
+  ([s]
      (StringReader. s (count s) 0)))
 
 (defn string-push-back-reader
   "Creates a PushbackReader from a given string"
   ([s]
      (string-push-back-reader s 1))
-  ([^String s buf-len]
+  ([s buf-len]
      (PushbackReader. (string-reader s) (object-array buf-len) buf-len buf-len)))
 
 (defn input-stream-reader
@@ -277,7 +274,7 @@ logging frames. Called when pushing a character back."
   "Creates a PushbackReader from a given InputStream"
   ([is]
      (input-stream-push-back-reader is 1))
-  ([^InputStream is buf-len]
+  ([is buf-len]
      (PushbackReader. (input-stream-reader is) (object-array buf-len) buf-len buf-len)))
 
 (defn indexing-push-back-reader
