@@ -42,10 +42,11 @@
          ^:dynamic *suppress-read*
          default-data-readers)
 
-(defn ^:private ns-name* [x]
-  (if (instance? Namespace x)
-    (name (ns-name x))
-    (name x)))
+(comment ;;; only needed for syntax-quote
+  (defn ^:private ns-name* [x]
+    (if (instance? Namespace x)
+      (name (ns-name x))
+      (name x))))
 
 (defn- macro-terminating? [ch]
   (case ch
@@ -340,7 +341,8 @@
 
 (defn- resolve-ns [sym]
   (or ((or *alias-map*
-           (ns-aliases *ns*)) sym)
+           ;; (ns-aliases *ns*) - not available in cljs
+             ) sym)
       (find-ns sym)))
 
 (defn- read-keyword
