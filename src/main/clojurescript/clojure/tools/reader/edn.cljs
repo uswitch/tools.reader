@@ -28,6 +28,7 @@
      string-builder
      persistent-list-create
      char-digit
+     char-value-of
      ]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -138,7 +139,7 @@
             token-len (count token)]
         (cond
 
-         (== 1 token-len)  (Character/valueOf (nth token 0))
+         (== 1 token-len)  (char-value-of (nth token 0))
 
          (= token "newline") \newline
          (= token "space") \space

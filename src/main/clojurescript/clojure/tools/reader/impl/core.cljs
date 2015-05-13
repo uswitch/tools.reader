@@ -112,6 +112,11 @@
   [char radix]
   (js/parseInt char radix))
 
+(defn char-value-of
+  ^:stub
+  [char]
+  char)
+
 (def last-id (atom 0))
 (defn rt-next-id
   ^:stub
