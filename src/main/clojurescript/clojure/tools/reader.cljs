@@ -28,6 +28,7 @@
      persistent-hash-set-create-with-check
      rt-next-id
      rt-map
+     char-digit
      ]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -110,13 +111,13 @@
        (loop [i offset uc 0]
          (if (== i l)
            (char uc)
-           (let [d (Character/digit (int (nth token i)) (int base))]
+           (let [d (char-digit (int (nth token i)) (int base))]
              (if (== d -1)
                (throw (IllegalArgumentException. (str "Invalid digit: " (nth token i))))
                (recur (inc i) (long (+ d (* uc base))))))))))
 
   ([rdr initch base length exact?]
-     (loop [i 1 uc (Character/digit (int initch) (int base))]
+     (loop [i 1 uc (char-digit (int initch) (int base))]
        (if (== uc -1)
          (throw (IllegalArgumentException. (str "Invalid digit: " initch)))
          (if-not (== i length)
@@ -128,7 +129,7 @@
                  (throw (IllegalArgumentException.
                          (str "Invalid character length: " i ", should be: " length)))
                  (char uc))
-               (let [d (Character/digit (int ch) (int base))]
+               (let [d (char-digit (int ch) (int base))]
                  (read-char rdr)
                  (if (== d -1)
                    (throw (IllegalArgumentException. (str "Invalid digit: " ch)))
@@ -150,7 +151,7 @@
             token-len (count token)]
         (cond
 
-         (== 1 token-len)  (Character/valueOf (nth token 0))
+         (== 1 token-len)  (nth token 0) ;;; no char type - so can't ensure/cache char
 
          (= token "newline") \newline
          (= token "space") \space
@@ -283,7 +284,7 @@
       \b "\b"
       \f "\f"
       \u (let [ch (read-char rdr)]
-           (if (== -1 (Character/digit (int ch) 16))
+           (if (== -1 (char-digit (int ch) 16))
              (reader-error rdr "Invalid unicode escape: \\u" ch)
              (read-unicode-char rdr ch 16 4 true)))
       (if (numeric? ch)

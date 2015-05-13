@@ -109,7 +109,8 @@
 
 (defn char-digit
   ^:stub
-  [code-point radix])
+  [char radix]
+  (js/parseInt char radix))
 
 (def last-id (atom 0))
 (defn rt-next-id
