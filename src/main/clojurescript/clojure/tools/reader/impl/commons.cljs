@@ -8,11 +8,9 @@
 
 (ns clojure.tools.reader.impl.commons
   (:refer-clojure :exclude [char])
-  (:require [clojure.tools.reader.reader-types :refer [peek-char read-char reader-error]]
-            [clojure.tools.reader.impl.utils :refer [numeric? newline? char]])
-  #_(:import (clojure.lang BigInt Numbers)
-           (java.util.regex Pattern Matcher)
-           java.lang.reflect.Constructor))
+  (:require
+   [clojure.tools.reader.reader-types :refer [peek-char read-char reader-error]]
+   [clojure.tools.reader.impl.utils :refer [numeric? newline? char]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; helpers
@@ -42,12 +40,12 @@
       (recur)))
   reader)
 
-(def ^Pattern int-pattern #"([-+]?)(?:(0)|([1-9][0-9]*)|0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+)|0[0-9]+)(N)?")
-(def ^Pattern ratio-pattern #"([-+]?[0-9]+)/([0-9]+)")
-(def ^Pattern float-pattern #"([-+]?[0-9]+(\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?")
+(def int-pattern #"([-+]?)(?:(0)|([1-9][0-9]*)|0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+)|0[0-9]+)(N)?")
+(def ratio-pattern #"([-+]?[0-9]+)/([0-9]+)")
+(def float-pattern #"([-+]?[0-9]+(\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?")
 
 (defn- match-int
-  [^Matcher m]
+  [m]
   (if (.group m 2)
     (if (.group m 8) 0N 0)
     (let [negate? (= "-" (.group m 1))
@@ -57,7 +55,7 @@
              (.group m 5) [(.group m 5) 8]
              (.group m 7) [(.group m 7) (Integer/parseInt (.group m 6))]
              :else        [nil nil])
-          ^String n (a 0)
+          n (a 0)
           radix (int (a 1))]
       (when n
         (let [bn (BigInteger. n radix)
@@ -69,9 +67,9 @@
               (BigInt/fromBigInteger bn))))))))
 
 (defn- match-ratio
-  [^Matcher m]
-  (let [^String numerator (.group m 1)
-        ^String denominator (.group m 2)
+  [m]
+  (let [numerator (.group m 1)
+        denominator (.group m 2)
         numerator (if (.startsWith numerator "+")
                     (subs numerator 1)
                     numerator)]
@@ -79,12 +77,12 @@
        (-> denominator BigInteger. BigInt/fromBigInteger Numbers/reduceBigInt))))
 
 (defn- match-float
-  [^String s ^Matcher m]
+  [s m]
   (if (.group m 4)
-    (BigDecimal. ^String (.group m 1))
+    (BigDecimal. (.group m 1))
     (Double/parseDouble s)))
 
-(defn match-number [^String s]
+(defn match-number [s]
   (let [int-matcher (.matcher int-pattern s)]
     (if (.matches int-matcher)
       (match-int int-matcher)
@@ -97,7 +95,7 @@
 
 (defn parse-symbol
   "Parses a string into a vector of the namespace and symbol"
-  [^String token]
+  [token]
   (when-not (or (= "" token)
                 (.endsWith token ":")
                 (.startsWith token "::"))
