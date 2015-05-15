@@ -57,7 +57,7 @@
       (nth s s-pos))))
 
 (comment
-  (deftype InputStreamReader [^InputStream is ^:unsynchronized-mutable ^"[B" buf]
+  (deftype InputStreamReader [is ^:unsynchronized-mutable ^"[B" buf]
    Reader
    (read-char [reader]
      (if buf
@@ -159,9 +159,9 @@
 
 (extend-type LineNumberingPushbackReader
   IndexingReader
-  (get-line-number [rdr] (.getLineNumber ^LineNumberingPushbackReader rdr))
+  (get-line-number [rdr] (.getLineNumber rdr))
   (get-column-number [rdr]
-    (.getColumnNumber ^LineNumberingPushbackReader rdr))
+    (.getColumnNumber rdr))
   (get-file-name [_] nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -179,19 +179,19 @@ metadata merged over `m`."
 logging frame."
   [source-log-frames]
   (let [current-frame @source-log-frames]
-    (.substring ^StringBuilder (:buffer current-frame) (:offset current-frame))))
+    (.substring (:buffer current-frame) (:offset current-frame))))
 
 (defn- log-source-char
   "Logs `char` to all currently active source logging frames."
   [source-log-frames char]
-  (when-let [^StringBuilder buffer (:buffer @source-log-frames)]
+  (when-let [buffer (:buffer @source-log-frames)]
     (.append buffer char)))
 
 (defn- drop-last-logged-char
   "Removes the last logged character from all currently active source
 logging frames. Called when pushing a character back."
   [source-log-frames]
-  (when-let [^StringBuilder buffer (:buffer @source-log-frames)]
+  (when-let [buffer (:buffer @source-log-frames)]
     (.deleteCharAt buffer (dec (.length buffer)))))
 
 (deftype SourceLoggingPushbackReader
@@ -233,8 +233,8 @@ logging frames. Called when pushing a character back."
 
 (defn log-source*
   [reader f]
-  (let [frame (.source-log-frames ^SourceLoggingPushbackReader reader)
-        ^StringBuilder buffer (:buffer @frame)
+  (let [frame (.source-log-frames reader)
+        buffer (:buffer @frame)
         new-frame (assoc-in @frame [:offset] (.length buffer))]
     (with-bindings {frame new-frame}
       (let [ret (f)]

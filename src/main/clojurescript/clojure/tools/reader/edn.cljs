@@ -48,7 +48,7 @@
       (identical? \` ch)
       (identical? \~ ch)))
 
-(defn- ^String read-token
+(defn- read-token
   ([rdr initch]
      (read-token rdr initch true))
   ([rdr initch validate-leading?]
@@ -92,7 +92,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn- read-unicode-char
-  ([^String token offset length base]
+  ([token offset length base]
      (let [l (+ offset length)]
        (when-not (== (count token) l)
          (throw (IllegalArgumentException (str "Invalid unicode character: \\" token))))
@@ -168,7 +168,7 @@
          :else (reader-error rdr "Unsupported character: \\" token)))
       (reader-error rdr "EOF while reading character"))))
 
-(defn- ^PersistentVector read-delimited
+(defn- read-delimited
   [delim rdr opts]
   (let [first-line (when (indexing-reader? rdr)
                      (get-line-number rdr))
@@ -273,8 +273,8 @@
       (let [token (read-token reader ch)
             s (parse-symbol token)]
         (if (and s (== -1 (.indexOf token "::")))
-          (let [^String ns (s 0)
-                ^String name (s 1)]
+          (let [ns (s 0)
+                name (s 1)]
             (if (identical? \: (nth token 0))
               (reader-error reader "Invalid token: :" token) ;; no ::keyword in edn
               (keyword ns name)))

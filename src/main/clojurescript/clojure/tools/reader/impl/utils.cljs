@@ -88,7 +88,7 @@
 
 (defn numeric?
   "Checks whether a given character is numeric"
-  [^Character ch]
+  [ch]
   (when ch
     (re-find #"\d" ch)))
 
