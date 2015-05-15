@@ -16,7 +16,8 @@
   (:require
    [clojure.tools.reader.impl.utils :refer
     [char whitespace? newline? make-var]]
-   [clojure.tools.reader.impl.core :refer [RuntimeException]]))
+   [clojure.tools.reader.impl.core :refer
+    [RuntimeException StringBuilder string-builder]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reader protocols
@@ -303,7 +304,7 @@ logging frames. Called when pushing a character back."
       0
       file-name
       (doto (make-var)
-        (alter-var-root (constantly {:buffer (StringBuilder.)
+        (alter-var-root (constantly {:buffer (string-builder)
                                      :offset 0}))))))
 
 (defn read-line
@@ -314,7 +315,7 @@ logging frames. Called when pushing a character back."
              (instance? BufferedReader rdr))
        (binding [*in* rdr]
          (clojure.core/read-line))
-       (loop [c (read-char rdr) s (StringBuilder.)]
+       (loop [c (read-char rdr) s (string-builder)]
          (if (newline? c)
            (str s)
            (recur (read-char rdr) (.append s c)))))))
