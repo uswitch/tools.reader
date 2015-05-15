@@ -58,13 +58,9 @@
           n (a 0)
           radix (int (a 1))]
       (when n
-        (let [bn (BigInteger. n radix)
+        (let [bn (js/parseInt n radix)
               bn (if negate? (.negate bn) bn)]
-          (if (.group m 8)
-            (BigInt/fromBigInteger bn)
-            (if (< (.bitLength bn) 64)
-              (.longValue bn)
-              (BigInt/fromBigInteger bn))))))))
+          bn)))))
 
 (defn- match-ratio
   [m]
@@ -73,13 +69,13 @@
         numerator (if (.startsWith numerator "+")
                     (subs numerator 1)
                     numerator)]
-    (/ (-> numerator   BigInteger. BigInt/fromBigInteger Numbers/reduceBigInt)
-       (-> denominator BigInteger. BigInt/fromBigInteger Numbers/reduceBigInt))))
+    (/ (-> numerator   js/parseInt)
+       (-> denominator js/parseInt)))) ;;; No ratio type in cljs?
 
 (defn- match-float
   [s m]
-  (if (.group m 4)
-    (BigDecimal. (.group m 1))
+  (if (.group m 4) ;;; for BigDecimal "10.03M", as all parsed to js/Number
+    (js/parseDouble (.group m 1))
     (js/parseDouble s)))
 
 (defn match-number [s]
