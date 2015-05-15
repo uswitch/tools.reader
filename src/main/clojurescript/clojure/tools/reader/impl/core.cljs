@@ -100,12 +100,13 @@
 
 (deftype StringBuilder [state]
   IStringBuilder
-  (append [_ s]
-    (str state s)))
+  (append [this s]
+    (swap! state str s)
+    this))
 
 (defn string-builder
   ([] (string-builder ""))
-  ([s] (StringBuilder. s)))
+  ([s] (StringBuilder. (atom s))))
 
 (defn char-digit
   ^:stub

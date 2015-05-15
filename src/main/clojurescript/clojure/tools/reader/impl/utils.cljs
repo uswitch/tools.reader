@@ -29,7 +29,7 @@
 (def pre-cljs-1243 (-> (cljs-version) :build (< 1243)))
 
 (defn ex-info? [ex]
-  (instance? clojure.lang.ExceptionInfo ex))
+  (instance? cljs.core.ExceptionInfo ex))
 
 #_(compile-if true ;pre-cljs-1243
 ;;; tagged-literal type arrived in CLJS-1243
@@ -51,7 +51,7 @@
     ;; (ns-unmap *ns* '->TaggedLiteral)
     ;; (ns-unmap *ns* 'map->TaggedLiteral)
 
-    (defmethod print-method clojure.tools.reader.impl.utils.TaggedLiteral [o ^java.io.Writer w]
+    (defmethod print-method clojure.tools.reader.impl.utils.TaggedLiteral [o w]
       (.write w "#")
       (print-method (:tag o) w)
       (.write w " ")
@@ -72,7 +72,7 @@
       [form splicing?]
       (clojure.tools.reader.impl.utils.ReaderConditional. splicing? form))
 
-    (defmethod print-method clojure.tools.reader.impl.utils.ReaderConditional [o ^java.io.Writer w]
+    (defmethod print-method clojure.tools.reader.impl.utils.ReaderConditional [o w]
       (.write w "#?")
       (when (:splicing? o) (.write w "@"))
       (print-method (:form o) w))))

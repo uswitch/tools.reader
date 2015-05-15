@@ -17,7 +17,7 @@
    [clojure.tools.reader.impl.utils :refer
     [char whitespace? newline? make-var]]
    [clojure.tools.reader.impl.core :refer
-    [RuntimeException StringBuilder string-builder]]))
+    [RuntimeException StringBuilder string-builder append]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reader protocols
@@ -122,23 +122,6 @@
   (get-column-number [reader] (int column))
   (get-file-name [reader] file-name))
 
-(extend-type java.io.PushbackReader
-  Reader
-  (read-char [rdr]
-    (let [c (.read ^java.io.PushbackReader rdr)]
-      (when (>= c 0)
-        (normalize-newline rdr (char c)))))
-
-  (peek-char [rdr]
-    (when-let [c (read-char rdr)]
-      (unread rdr c)
-      c))
-
-  IPushbackReader
-  (unread [rdr c]
-    (when c
-      (.unread ^java.io.PushbackReader rdr (int c)))))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Source Logging support
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -160,7 +143,7 @@ logging frame."
   "Logs `char` to all currently active source logging frames."
   [source-log-frames char]
   (when-let [buffer (:buffer @source-log-frames)]
-    (.append buffer char)))
+    (append buffer char)))
 
 (defn- drop-last-logged-char
   "Removes the last logged character from all currently active source
@@ -226,7 +209,8 @@ logging frames. Called when pushing a character back."
 (defn indexing-reader?
   "Returns true if the reader satisfies IndexingReader"
   [rdr]
-  (instance? clojure.tools.reader.reader_types.IndexingReader rdr))
+  (.log js/console (type rdr))
+  (instance? IndexingReader rdr))
 
 (defn string-reader
   "Creates a StringReader from a given string"
@@ -275,7 +259,7 @@ logging frames. Called when pushing a character back."
    (loop [c (read-char rdr) s (string-builder)]
      (if (newline? c)
        (str s)
-       (recur (read-char rdr) (.append s c))))))
+       (recur (read-char rdr) (append s c))))))
 
 (defn reader-error
   "Throws an ExceptionInfo with the given message.

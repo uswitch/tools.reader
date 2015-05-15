@@ -30,6 +30,7 @@
      rt-map
      char-digit
      thread-bound?
+     append
      ]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -61,13 +62,14 @@
   (if-not initch
     (reader-error rdr "EOF while reading")
     (loop [sb (string-builder) ch initch]
+      (.log js/console sb ch initch)
       (if (or (whitespace? ch)
               (macro-terminating? ch)
               (nil? ch))
         (do (when ch
               (unread rdr ch))
             (str sb))
-        (recur (.append sb ch) (read-char rdr))))))
+        (recur (append sb ch) (read-char rdr))))))
 
 (declare read-tagged)
 
@@ -96,12 +98,12 @@
         (if (nil? ch)
           (reader-error rdr "EOF while reading regex")
           (do
-            (.append sb ch )
+            (append sb ch )
             (when (identical? \\ ch)
               (let [ch (read-char rdr)]
                 (if (nil? ch)
                   (reader-error rdr "EOF while reading regex"))
-                (.append sb ch)))
+                (append sb ch)))
             (recur (read-char rdr))))))))
 
 (defn- read-unicode-char
@@ -182,11 +184,11 @@
       (reader-error rdr "EOF while reading character"))))
 
 (defn ^:private starting-line-col-info [rdr]
-  (when (indexing-reader? rdr)
+  (when false ;(indexing-reader? rdr)
     [(get-line-number rdr) (int (dec (get-column-number rdr)))]))
 
 (defn ^:private ending-line-col-info [rdr]
-  (when (indexing-reader? rdr)
+  (when false ;(indexing-reader? rdr)
     [(get-line-number rdr) (get-column-number rdr)]))
 
 (defonce ^:private READ_EOF (js/Object.))
@@ -265,14 +267,14 @@
 
 (defn- read-number
   [rdr initch]
-  (loop [sb (doto (string-builder) (.append initch))
+  (loop [sb (doto (string-builder) (append initch))
          ch (read-char rdr)]
     (if (or (whitespace? ch) (macros ch) (nil? ch))
       (let [s (str sb)]
         (unread rdr ch)
         (or (match-number s)
             (reader-error rdr "Invalid number format [" s "]")))
-      (recur (doto sb (.append ch)) (read-char rdr)))))
+      (recur (doto sb (append ch)) (read-char rdr)))))
 
 (defn- escape-char [sb rdr]
   (let [ch (read-char rdr)]
@@ -301,10 +303,10 @@
          ch (read-char reader)]
     (case ch
       nil (reader-error reader "EOF while reading string")
-      \\ (recur (doto sb (.append (escape-char sb reader)))
+      \\ (recur (doto sb (append (escape-char sb reader)))
                 (read-char reader))
       \" (str sb)
-      (recur (doto sb (.append ch)) (read-char reader)))))
+      (recur (doto sb (append ch)) (read-char reader)))))
 
 (defn- read-symbol
   [rdr initch]
@@ -897,7 +899,7 @@
        (loop []
          ;; log-source reader
          (if (seq pending-forms)
-           (.remove pending-forms 0)
+           (rest pending-forms)
            (let [ch (read-char reader)]
              (cond
                (whitespace? ch) (recur)
@@ -912,21 +914,22 @@
                              res))
                          (read-symbol reader ch)))))))
        (catch Exception e
+         (.log js/console (.-stack e))
          (if (ex-info? e)
            (let [d (ex-data e)]
              (if (= :reader-exception (:type d))
                (throw e)
-               (throw (ex-info (.getMessage e)
+               (throw (ex-info (.-message e)
                                (merge {:type :reader-exception}
                                       d
-                                      (if (indexing-reader? reader)
+                                      #_(if (indexing-reader? reader)
                                         {:line   (get-line-number reader)
                                          :column (get-column-number reader)
                                          :file   (get-file-name reader)}))
                                e))))
-           (throw (ex-info (.getMessage e)
+           (throw (ex-info (.-message e)
                            (merge {:type :reader-exception}
-                                  (if (indexing-reader? reader)
+                                  #_(if (indexing-reader? reader)
                                     {:line   (get-line-number reader)
                                      :column (get-column-number reader)
                                      :file   (get-file-name reader)}))

@@ -22,5 +22,5 @@
                         :source-paths ["src/main/clojurescript"]
                         :compiler {:output-to "out/main.js"
                                    :output-dir "out"
-                                   :optimizations :whitespace
+                                   :optimizations :simple
                                    :pretty-print true}}]})
