@@ -29,6 +29,7 @@
      rt-next-id
      rt-map
      char-digit
+     thread-bound?
      ]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -340,6 +341,10 @@
    Defaults to nil"
   nil)
 
+(defn find-ns ^:stub [sym] nil)
+
+(def ^{:stub true} *ns* 'user)
+
 (defn- resolve-ns [sym]
   (or ((or *alias-map*
            ;; (ns-aliases *ns*) - not available in cljs
@@ -375,20 +380,20 @@
 (defn- read-meta
   "Read metadata and return the following object with the metadata applied"
   [rdr _ opts pending-forms]
-  (log-source rdr
-    (let [[line column] (starting-line-col-info rdr)
-          m (desugar-meta (read* rdr true nil opts pending-forms))]
-      (when-not (map? m)
-        (reader-error rdr "Metadata must be Symbol, Keyword, String or Map"))
-      (let [o (read* rdr true nil opts pending-forms)]
-        (if (instance? IMeta o)
-          (let [m (if (and line (seq? o))
-                    (assoc m :line line :column column)
-                    m)]
-            (if (instance? IWithMeta o)
-              (with-meta o (merge (meta o) m))
-              (reset-meta! o m)))
-          (reader-error rdr "Metadata can only be applied to IMetas"))))))
+  ;; log-source rdr
+  (let [[line column] (starting-line-col-info rdr)
+        m (desugar-meta (read* rdr true nil opts pending-forms))]
+    (when-not (map? m)
+      (reader-error rdr "Metadata must be Symbol, Keyword, String or Map"))
+    (let [o (read* rdr true nil opts pending-forms)]
+      (if (instance? IMeta o)
+        (let [m (if (and line (seq? o))
+                  (assoc m :line line :column column)
+                  m)]
+          (if (instance? IWithMeta o)
+            (with-meta o (merge (meta o) m))
+            (reset-meta! o m)))
+        (reader-error rdr "Metadata can only be applied to IMetas")))))
 
 (defn- read-set
   [rdr _ opts pending-forms]
@@ -890,22 +895,22 @@
        (reader-error "Reading disallowed - *read-eval* bound to :unknown"))
      (try
        (loop []
-         (log-source reader
-           (if (seq pending-forms)
-             (.remove pending-forms 0)
-             (let [ch (read-char reader)]
-               (cond
-                (whitespace? ch) (recur)
-                (nil? ch) (if eof-error? (reader-error reader "EOF") sentinel)
-                (= ch return-on) READ_FINISHED
-                (number-literal? reader ch) (read-number reader ch)
-                :else (let [f (macros ch)]
-                        (if f
-                          (let [res (f reader ch opts pending-forms)]
-                            (if (identical? res reader)
-                              (recur)
-                              res))
-                          (read-symbol reader ch))))))))
+         ;; log-source reader
+         (if (seq pending-forms)
+           (.remove pending-forms 0)
+           (let [ch (read-char reader)]
+             (cond
+               (whitespace? ch) (recur)
+               (nil? ch) (if eof-error? (reader-error reader "EOF") sentinel)
+               (= ch return-on) READ_FINISHED
+               (number-literal? reader ch) (read-number reader ch)
+               :else (let [f (macros ch)]
+                       (if f
+                         (let [res (f reader ch opts pending-forms)]
+                           (if (identical? res reader)
+                             (recur)
+                             res))
+                         (read-symbol reader ch)))))))
        (catch Exception e
          (if (ex-info? e)
            (let [d (ex-data e)]

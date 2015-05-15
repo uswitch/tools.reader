@@ -6,10 +6,8 @@
 ;;   the terms of this license.
 ;;   You must not remove this notice, or any other, from this software.
 
-(ns ^:skip-wiki clojure.tools.reader.impl.utils
+(ns clojure.tools.reader.impl.utils
     (:refer-clojure :exclude [char])
-    (:require-macros
-     [clojure.tools.reader.impl.utils :refer [compile-if]])
     (:require
      [clojure.string :as string]))
 

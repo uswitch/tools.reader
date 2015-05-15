@@ -11,7 +11,7 @@
   clojure.tools.reader.reader-types
   (:refer-clojure :exclude [char read-line])
   (:require [clojure.tools.reader.impl.utils :refer
-             [char whitespace? newline? >=clojure-1-5-alpha*? make-var]]))
+             [char whitespace? newline? make-var]]))
 
 (defmacro log-source
   "If reader is a SourceLoggingPushbackReader, execute body in a source
@@ -19,8 +19,10 @@
   [reader & body]
   `(if (and (source-logging-reader? ~reader)
             (not (whitespace? (peek-char ~reader))))
-     (log-source* ~reader (^:once fn* [] ~@body))
+     (do ~@body)
      (do ~@body)))
+
+;; (log-source* ~reader (^:once fn* [] ~@body))
 
 (defmacro update! [what f]
   (list 'set! what (list f what)))

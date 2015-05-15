@@ -57,25 +57,6 @@
     (when (> s-len s-pos)
       (nth s s-pos))))
 
-(comment
-  (deftype InputStreamReader [is ^:unsynchronized-mutable ^"[B" buf]
-   Reader
-   (read-char [reader]
-     (if buf
-       (let [c (aget buf 0)]
-         (set! buf nil)
-         (char c))
-       (let [c (.read is)]
-         (when (>= c 0)
-           (char c)))))
-   (peek-char [reader]
-     (when-not buf
-       (set! buf (byte-array 1))
-       (when (== -1 (.read is buf))
-         (set! buf nil)))
-     (when buf
-       (char (aget buf 0))))))
-
 (deftype PushbackReader
     [rdr buf buf-len ^:unsynchronized-mutable buf-pos]
   Reader
@@ -158,13 +139,6 @@
     (when c
       (.unread ^java.io.PushbackReader rdr (int c)))))
 
-(extend-type LineNumberingPushbackReader
-  IndexingReader
-  (get-line-number [rdr] (.getLineNumber rdr))
-  (get-column-number [rdr]
-    (.getColumnNumber rdr))
-  (get-file-name [_] nil))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Source Logging support
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -232,16 +206,17 @@ logging frames. Called when pushing a character back."
   (get-column-number [reader] (int column))
   (get-file-name [reader] file-name))
 
-(defn log-source*
-  [reader f]
-  (let [frame (.source-log-frames reader)
-        buffer (:buffer @frame)
-        new-frame (assoc-in @frame [:offset] (.length buffer))]
-    (with-bindings {frame new-frame}
-      (let [ret (f)]
-        (if (instance? clojure.lang.IMeta ret)
-          (merge-meta ret {:source (peek-source-log frame)})
-          ret)))))
+;; (comment 
+;;   (defn log-source*
+;;    [reader f]
+;;    (let [frame (.source-log-frames reader)
+;;          buffer (:buffer @frame)
+;;          new-frame (assoc-in @frame [:offset] (.length buffer))]
+;;      (binding [frame new-frame]
+;;        (let [ret (f)]
+;;          (if (instance? clojure.lang.IMeta ret)
+;;            (merge-meta ret {:source (peek-source-log frame)})
+;;            ret))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public API
@@ -251,8 +226,7 @@ logging frames. Called when pushing a character back."
 (defn indexing-reader?
   "Returns true if the reader satisfies IndexingReader"
   [rdr]
-  (or (instance? clojure.tools.reader.reader_types.IndexingReader rdr)
-      (instance? LineNumberingPushbackReader rdr)))
+  (instance? clojure.tools.reader.reader_types.IndexingReader rdr))
 
 (defn string-reader
   "Creates a StringReader from a given string"
@@ -265,18 +239,6 @@ logging frames. Called when pushing a character back."
      (string-push-back-reader s 1))
   ([s buf-len]
      (PushbackReader. (string-reader s) (object-array buf-len) buf-len buf-len)))
-
-(defn input-stream-reader
-  "Creates an InputStreamReader from an InputStream"
-  [is]
-  (InputStreamReader. is nil))
-
-(defn input-stream-push-back-reader
-  "Creates a PushbackReader from a given InputStream"
-  ([is]
-     (input-stream-push-back-reader is 1))
-  ([is buf-len]
-     (PushbackReader. (input-stream-reader is) (object-array buf-len) buf-len buf-len)))
 
 (defn indexing-push-back-reader
   "Creates an IndexingPushbackReader from a given string or PushbackReader"
@@ -304,22 +266,16 @@ logging frames. Called when pushing a character back."
       0
       file-name
       (doto (make-var)
-        (alter-var-root (constantly {:buffer (string-builder)
-                                     :offset 0}))))))
+        ;;(alter-var-root (constantly {:buffer (string-builder) :offset 0}))
+        ))))
 
-(comment ;;; dont really need a line reader at this point
-  (defn read-line
+(defn read-line
   "Reads a line from the reader or from *in* if no reader is specified"
-  ([] (read-line *in*))
   ([rdr]
-   (if (or (instance? LineNumberingPushbackReader rdr)
-           (instance? BufferedReader rdr))
-     (binding [*in* rdr]
-       (clojure.core/read-line))
-     (loop [c (read-char rdr) s (string-builder)]
-       (if (newline? c)
-         (str s)
-         (recur (read-char rdr) (.append s c))))))))
+   (loop [c (read-char rdr) s (string-builder)]
+     (if (newline? c)
+       (str s)
+       (recur (read-char rdr) (.append s c))))))
 
 (defn reader-error
   "Throws an ExceptionInfo with the given message.

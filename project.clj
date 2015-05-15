@@ -4,7 +4,7 @@
   :url "https://github.com/clojure/tools.reader"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :source-paths ["src/main/clojure"]
+  :source-paths ["src/main/clojure" "src/main/clojurescript"]
   :test-paths ["src/test/clojure"]
   :repositories {"sonatype-oss-public" "https://oss.sonatype.org/content/groups/public/"}
   :dependencies [[org.clojure/clojure "1.7.0-master-SNAPSHOT"]
@@ -20,7 +20,7 @@
   :min-lein-version "2.0.0"
   :cljsbuild {:builds [{:id "dev"
                         :source-paths ["src/main/clojurescript"]
-                        :compiler {:output-to "target/out/main.js"
-                                   :output-dir "target/out"
+                        :compiler {:output-to "out/main.js"
+                                   :output-dir "out"
                                    :optimizations :whitespace
                                    :pretty-print true}}]})
