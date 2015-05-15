@@ -102,7 +102,9 @@
   IStringBuilder
   (append [this s]
     (swap! state str s)
-    this))
+    this)
+  Object
+  (toString [this] @state))
 
 (defn string-builder
   ([] (string-builder ""))

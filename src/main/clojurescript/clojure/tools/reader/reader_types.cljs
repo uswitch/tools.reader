@@ -209,7 +209,6 @@ logging frames. Called when pushing a character back."
 (defn indexing-reader?
   "Returns true if the reader satisfies IndexingReader"
   [rdr]
-  (.log js/console (type rdr))
   (instance? IndexingReader rdr))
 
 (defn string-reader

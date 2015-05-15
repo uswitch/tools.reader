@@ -45,56 +45,61 @@
 (def float-pattern #"([-+]?[0-9]+(\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?")
 
 (defn- match-int
-  [m]
-  (if (.group m 2)
-    (if (.group m 8) 0N 0)
-    (let [negate? (= "-" (.group m 1))
-          a (cond
-             (.group m 3) [(.group m 3) 10]
-             (.group m 4) [(.group m 4) 16]
-             (.group m 5) [(.group m 5) 8]
-             (.group m 7) [(.group m 7) (js/parseInt (.group m 6))]
-             :else        [nil nil])
-          n (a 0)
-          radix (int (a 1))]
-      (when n
-        (let [bn (js/parseInt n radix)
-              bn (if negate? (.negate bn) bn)]
-          bn)))))
+  [s]
+  (let [m (vec (re-find int-pattern s))]
+    (if (m 2)
+      (if (m 8) 0N 0)
+      (let [negate? (= "-" (m 1))
+            a (cond
+                (m 3) [(m 3) 10]
+                (m 4) [(m 4) 16]
+                (m 5) [(m 5) 8]
+                (m 7) [(m 7) (js/parseInt (m 6))]
+                :else        [nil nil])
+            n (a 0)
+            radix (int (a 1))]
+        (when n
+          (let [bn (js/parseInt n radix)
+                bn (if negate? (.negate bn) bn)]
+            bn))))))
 
 (defn- match-ratio
-  [m]
-  (let [numerator (.group m 1)
-        denominator (.group m 2)
-        numerator (if (.startsWith numerator "+")
+  [s]
+  (let [m (vec (re-find ratio-pattern s))
+        numerator (m 1)
+        denominator (m 2)
+        numerator (if (re-find #"^\+" numerator)
                     (subs numerator 1)
                     numerator)]
     (/ (-> numerator   js/parseInt)
        (-> denominator js/parseInt)))) ;;; No ratio type in cljs?
 
 (defn- match-float
-  [s m]
-  (if (.group m 4) ;;; for BigDecimal "10.03M", as all parsed to js/Number
-    (js/parseDouble (.group m 1))
-    (js/parseDouble s)))
+  [s]
+  (let [m (vec (re-find float-pattern s))]
+    (if (m 4) ;;; for BigDecimal "10.03M", as all parsed to js/Number
+      (js/parseFloat (m 1))
+      (js/parseFloat s))))
+
+(defn matches? [pattern s]
+  (let [[match] (re-find pattern s)]
+    (= match s)))
 
 (defn match-number [s]
-  (let [int-matcher (.matcher int-pattern s)]
-    (if (.matches int-matcher)
-      (match-int int-matcher)
-      (let [float-matcher (.matcher float-pattern s)]
-        (if (.matches float-matcher)
-          (match-float s float-matcher)
-          (let [ratio-matcher (.matcher ratio-pattern s)]
-            (when (.matches ratio-matcher)
-              (match-ratio ratio-matcher))))))))
+  ;; (.log js/console (str s) (re-find int-pattern s))
+  (if (matches? int-pattern s)
+    (match-int s)
+    (if (matches? float-pattern s)
+      (match-float s)
+      (when (matches? ratio-pattern s)
+        (match-ratio s)))))
 
 (defn parse-symbol
   "Parses a string into a vector of the namespace and symbol"
   [token]
   (when-not (or (= "" token)
-                (.endsWith token ":")
-                (.startsWith token "::"))
+                (re-find #":$" token)
+                (re-find #"^::" token))
     (let [ns-idx (.indexOf token "/")]
       (if-let [ns (and (pos? ns-idx)
                        (subs token 0 ns-idx))]

@@ -62,7 +62,6 @@
   (if-not initch
     (reader-error rdr "EOF while reading")
     (loop [sb (string-builder) ch initch]
-      (.log js/console sb ch initch)
       (if (or (whitespace? ch)
               (macro-terminating? ch)
               (nil? ch))
