@@ -54,7 +54,7 @@
     (\" \; \@ \^ \` \~ \( \) \[ \] \{ \} \\) true
     false))
 
-(defn- ^String read-token
+(defn- read-token
   "Read in a single logical token from the reader"
   [rdr initch]
   (if-not initch
@@ -104,7 +104,7 @@
             (recur (read-char rdr))))))))
 
 (defn- read-unicode-char
-  ([^String token offset length base]
+  ([token offset length base]
      (let [l (+ offset length)]
        (when-not (== (count token) l)
          (throw (IllegalArgumentException. (str "Invalid unicode character: \\" token))))
@@ -191,7 +191,7 @@
 (defonce ^:private READ_EOF (js/Object.))
 (defonce ^:private READ_FINISHED (js/Object.))
 
-(defn- ^PersistentVector read-delimited
+(defn- read-delimited
   "Reads and returns a collection ended with delim"
   [delim rdr opts pending-forms]
   (let [[start-line start-column] (starting-line-col-info rdr)
@@ -353,8 +353,8 @@
       (let [token (read-token reader ch)
             s (parse-symbol token)]
         (if s
-          (let [^String ns (s 0)
-                ^String name (s 1)]
+          (let [ns (s 0)
+                name (s 1)]
             (if (identical? \: (nth token 0))
               (if ns
                 (let [ns (resolve-ns (symbol (subs ns 1)))]
@@ -492,7 +492,7 @@
       (if splicing
         (if (instance? List result)
           (do
-            (.addAll ^List pending-forms 0 ^List result)
+            (.addAll pending-forms 0 result)
             rdr)
           (reader-error rdr "Spliced form list in read-cond-splicing must implement java.util.List."))
         result))))
@@ -654,9 +654,9 @@
            (symbol (ns-name* ns) (name s))))
        (if-let [o ((ns-map *ns*) s)]
          (if (class? o)
-           (symbol (.getName ^Class o))
+           (symbol (.getName o))
            (if (var? o)
-             (symbol (-> ^Var o .ns ns-name*) (-> ^Var o .sym name))))
+             (symbol (-> o .ns ns-name*) (-> o .sym name))))
          (symbol (ns-name* *ns*) (name s)))))))
 
 (defn- add-meta [form ret]
@@ -702,7 +702,7 @@
               (let [maybe-class ((ns-map *ns*)
                                  (symbol (namespace form)))]
                 (if (class? maybe-class)
-                  (symbol (.getName ^Class maybe-class) (name form))
+                  (symbol (.getName maybe-class) (name form))
                   (resolve-symbol form)))
               (let [sym (name form)]
                 (cond
@@ -809,7 +809,7 @@
              (if (>= i ctors-num)
                (reader-error rdr "Unexpected number of constructor arguments to " (str class)
                              ": got" numargs)
-               (if (== (count (.getParameterTypes ^Constructor (aget all-ctors i)))
+               (if (== (count (.getParameterTypes (aget all-ctors i)))
                        numargs)
                  (Reflector/invokeConstructor class entries)
                  (recur (inc i)))))
@@ -891,7 +891,7 @@
        (loop []
          (log-source reader
            (if (seq pending-forms)
-             (.remove ^List pending-forms 0)
+             (.remove pending-forms 0)
              (let [ch (read-char reader)]
                (cond
                 (whitespace? ch) (recur)
