@@ -497,22 +497,23 @@
           (reader-error rdr "Spliced form list in read-cond-splicing must implement java.util.List."))
         result))))
 
-(defn- read-cond
-  [rdr _ opts pending-forms]
-  (when (not (and opts (#{:allow :preserve} (:read-cond opts))))
-    (throw (RuntimeException. "Conditional read not allowed")))
-  (if-let [ch (read-char rdr)]
-    (let [splicing (= ch \@)
-          ch (if splicing (read-char rdr) ch)]
-      (if-let [ch (if (whitespace? ch) (read-past whitespace? rdr) ch)]
-        (if (not= ch \()
-          (throw (RuntimeException. "read-cond body must be a list"))
-          (binding [*suppress-read* (or *suppress-read* (= :preserve (:read-cond opts)))]
-            (if *suppress-read*
-              (reader-conditional (read-list rdr ch opts pending-forms) splicing)
-              (read-cond-delimited rdr splicing opts pending-forms))))
-        (reader-error rdr "EOF while reading character")))
-    (reader-error rdr "EOF while reading character")))
+(comment ;;; not going to implement reader conditionals atm.
+  (defn- read-cond
+   [rdr _ opts pending-forms]
+   (when (not (and opts (#{:allow :preserve} (:read-cond opts))))
+     (throw (RuntimeException. "Conditional read not allowed")))
+   (if-let [ch (read-char rdr)]
+     (let [splicing (= ch \@)
+           ch (if splicing (read-char rdr) ch)]
+       (if-let [ch (if (whitespace? ch) (read-past whitespace? rdr) ch)]
+         (if (not= ch \()
+           (throw (RuntimeException. "read-cond body must be a list"))
+           (binding [*suppress-read* (or *suppress-read* (= :preserve (:read-cond opts)))]
+             (if *suppress-read*
+               (reader-conditional (read-list rdr ch opts pending-forms) splicing)
+               (read-cond-delimited rdr splicing opts pending-forms))))
+         (reader-error rdr "EOF while reading character")))
+     (reader-error rdr "EOF while reading character"))))
 
 (def ^:private ^:dynamic arg-env)
 
@@ -785,7 +786,7 @@
     \" read-regex
     \! read-comment
     \_ read-discard
-    \? read-cond
+    ;; \? read-cond ;;; not going to implement reader conditionals atm.
     nil))
 
 (comment
@@ -947,7 +948,7 @@
    Note that the function signature of clojure.tools.reader/read and
    clojure.tools.reader.edn/read is not the same for eof-handling"
   {:arglists '([] [reader] [opts reader] [reader eof-error? eof-value])}
-  ([] (read *in* true nil))
+  ;; ([] (read *in* true nil))
   ([reader] (read reader true nil))
   ([{eof :eof :as opts :or {eof :eofthrow}} reader] (read* reader (= eof :eofthrow) eof nil opts (list)))
   ([reader eof-error? sentinel] (read* reader eof-error? sentinel nil {} (list))))

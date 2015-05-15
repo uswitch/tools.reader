@@ -307,18 +307,19 @@ logging frames. Called when pushing a character back."
         (alter-var-root (constantly {:buffer (string-builder)
                                      :offset 0}))))))
 
-(defn read-line
+(comment ;;; dont really need a line reader at this point
+  (defn read-line
   "Reads a line from the reader or from *in* if no reader is specified"
   ([] (read-line *in*))
   ([rdr]
-     (if (or (instance? LineNumberingPushbackReader rdr)
-             (instance? BufferedReader rdr))
-       (binding [*in* rdr]
-         (clojure.core/read-line))
-       (loop [c (read-char rdr) s (string-builder)]
-         (if (newline? c)
-           (str s)
-           (recur (read-char rdr) (.append s c)))))))
+   (if (or (instance? LineNumberingPushbackReader rdr)
+           (instance? BufferedReader rdr))
+     (binding [*in* rdr]
+       (clojure.core/read-line))
+     (loop [c (read-char rdr) s (string-builder)]
+       (if (newline? c)
+         (str s)
+         (recur (read-char rdr) (.append s c))))))))
 
 (defn reader-error
   "Throws an ExceptionInfo with the given message.
