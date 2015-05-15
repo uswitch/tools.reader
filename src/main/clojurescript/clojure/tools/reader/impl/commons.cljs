@@ -53,7 +53,7 @@
              (.group m 3) [(.group m 3) 10]
              (.group m 4) [(.group m 4) 16]
              (.group m 5) [(.group m 5) 8]
-             (.group m 7) [(.group m 7) (Integer/parseInt (.group m 6))]
+             (.group m 7) [(.group m 7) (js/parseInt (.group m 6))]
              :else        [nil nil])
           n (a 0)
           radix (int (a 1))]
@@ -80,7 +80,7 @@
   [s m]
   (if (.group m 4)
     (BigDecimal. (.group m 1))
-    (Double/parseDouble s)))
+    (js/parseDouble s)))
 
 (defn match-number [s]
   (let [int-matcher (.matcher int-pattern s)]
