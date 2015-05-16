@@ -31,6 +31,9 @@
      char-digit
      thread-bound?
      append
+     starts-with?
+     prepend!
+     mutable-list
      ]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -162,7 +165,7 @@
          (= token "formfeed") \formfeed
          (= token "return") \return
 
-         (.startsWith token "u")
+         (starts-with? token "u")
          (let [c (read-unicode-char token 1 4 16)
                ic (int c)]
            (if (and (> ic upper-limit)
@@ -170,7 +173,7 @@
              (reader-error rdr "Invalid character constant: \\u" (integer-to-string ic 16))
              c))
 
-         (.startsWith token "o")
+         (starts-with? token "o")
          (let [len (dec token-len)]
            (if (> len 3)
              (reader-error rdr "Invalid octal escape sequence length: " len)
@@ -498,7 +501,7 @@
       (if splicing
         (if (instance? List result)
           (do
-            (.addAll pending-forms 0 result)
+            (prepend! pending-forms result)
             rdr)
           (reader-error rdr "Spliced form list in read-cond-splicing must implement java.util.List."))
         result))))
@@ -957,8 +960,8 @@
   {:arglists '([] [reader] [opts reader] [reader eof-error? eof-value])}
   ;; ([] (read *in* true nil))
   ([reader] (read reader true nil))
-  ([{eof :eof :as opts :or {eof :eofthrow}} reader] (read* reader (= eof :eofthrow) eof nil opts (list)))
-  ([reader eof-error? sentinel] (read* reader eof-error? sentinel nil {} (list))))
+  ([{eof :eof :as opts :or {eof :eofthrow}} reader] (read* reader (= eof :eofthrow) eof nil opts (mutable-list)))
+  ([reader eof-error? sentinel] (read* reader eof-error? sentinel nil {} (mutable-list))))
 
 (defn read-string
   "Reads one object from the string s.

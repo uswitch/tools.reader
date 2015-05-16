@@ -60,7 +60,7 @@
             radix (int (a 1))]
         (when n
           (let [bn (js/parseInt n radix)
-                bn (if negate? (.negate bn) bn)]
+                bn (if negate? (* -1 bn) bn)]
             bn))))))
 
 (defn- match-ratio
@@ -86,7 +86,6 @@
     (= match s)))
 
 (defn match-number [s]
-  ;; (.log js/console (str s) (re-find int-pattern s))
   (if (matches? int-pattern s)
     (match-int s)
     (if (matches? float-pattern s)
@@ -108,7 +107,7 @@
             (let [sym (subs token ns-idx)]
               (when (and (not (numeric? (nth sym 0)))
                          (not (= "" sym))
-                         (not (.endsWith ns ":"))
+                         (not (re-find #":$" ns))
                          (or (= sym "/")
                              (== -1 (.indexOf sym "/"))))
                 [ns sym]))))

@@ -137,7 +137,7 @@ metadata merged over `m`."
 logging frame."
   [source-log-frames]
   (let [current-frame @source-log-frames]
-    (.substring (:buffer current-frame) (:offset current-frame))))
+    (subs (:buffer current-frame) (:offset current-frame))))
 
 (defn- log-source-char
   "Logs `char` to all currently active source logging frames."

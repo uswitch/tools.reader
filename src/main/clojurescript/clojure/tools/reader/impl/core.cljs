@@ -133,3 +133,20 @@
    :static true}
   [& vars]
   (every? #(.getThreadBinding %) vars))
+
+(defn starts-with? [s match]
+  (re-find (re-pattern match) s))
+
+(defprotocol IMutableList
+  (concat! [this x])
+  (prepend! [this x]))
+
+(deftype MutableList [state]
+  IMutableList
+  (concat! [_ x]
+    (swap! state concat x))
+  (prepend! [_ x]
+    (swap! state (partial concat x))))
+
+(defn mutable-list [& args]
+  (MutableList. args))

@@ -29,6 +29,8 @@
      persistent-list-create
      char-digit
      char-value-of
+     append
+     starts-with?
      ]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -69,7 +71,7 @@
           (str sb)
           (if (not-constituent? ch)
             (reader-error rdr "Invalid constituent character: " ch)
-            (recur (doto sb (.append (read-char rdr))) (peek-char rdr))))))))
+            (recur (doto sb (append (read-char rdr))) (peek-char rdr))))))))
 
 (declare read-tagged)
 
@@ -148,7 +150,7 @@
          (= token "formfeed") \formfeed
          (= token "return") \return
 
-         (.startsWith token "u")
+         (starts-with? token "u")
          (let [c (read-unicode-char token 1 4 16)
                ic (int c)]
            (if (and (> ic upper-limit)
@@ -156,7 +158,7 @@
              (reader-error rdr "Invalid character constant: \\u" (integer-to-string ic 16))
              c))
 
-         (.startsWith token "o")
+         (starts-with? token "o")
          (let [len (dec token-len)]
            (if (> len 3)
              (reader-error rdr "Invalid octal escape sequence length: " len)
@@ -207,14 +209,14 @@
 
 (defn- read-number
   [reader initch opts]
-  (loop [sb (doto (string-builder) (.append initch))
+  (loop [sb (doto (string-builder) (append initch))
          ch (read-char reader)]
     (if (or (whitespace? ch) (macros ch) (nil? ch))
       (let [s (str sb)]
         (unread reader ch)
         (or (match-number s)
             (reader-error reader "Invalid number format [" s "]")))
-      (recur (doto sb (.append ch)) (read-char reader)))))
+      (recur (doto sb (append ch)) (read-char reader)))))
 
 (defn- escape-char [sb rdr]
   (let [ch (read-char rdr)]
@@ -243,10 +245,10 @@
          ch (read-char reader)]
     (case ch
       nil (reader-error reader "EOF while reading string")
-      \\ (recur (doto sb (.append (escape-char sb reader)))
+      \\ (recur (doto sb (append (escape-char sb reader)))
                 (read-char reader))
       \" (str sb)
-      (recur (doto sb (.append ch)) (read-char reader)))))
+      (recur (doto sb (append ch)) (read-char reader)))))
 
 (defn- read-symbol
   [rdr initch]
@@ -388,7 +390,7 @@
            (let [d (ex-data e)]
              (if (= :reader-exception (:type d))
                (throw e)
-               (throw (ex-info (.getMessage e)
+               (throw (ex-info (.-message e)
                                (merge {:type :reader-exception}
                                       d
                                       (if (indexing-reader? reader)
@@ -396,7 +398,7 @@
                                          :column (get-column-number reader)
                                          :file   (get-file-name reader)}))
                                e))))
-           (throw (ex-info (.getMessage e)
+           (throw (ex-info (.-message e)
                            (merge {:type :reader-exception}
                                   (if (indexing-reader? reader)
                                     {:line   (get-line-number reader)
