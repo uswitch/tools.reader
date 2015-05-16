@@ -115,5 +115,37 @@
   (is (= (char 0xffff) (read-string "\\uffff")))
 )
 
+(deftest read-string*
+  (is (= "foo bar" (read-string "\"foo bar\"")))
+  (is (= "foo\\bar" (read-string "\"foo\\\\bar\"")))
+  (is (= "foo\000bar" (read-string "\"foo\\000bar\"")))
+  (is (= "foo\u0194bar" (read-string "\"foo\\u0194bar\"")))
+  (is (= "foo\123bar" (read-string "\"foo\\123bar\"")))
+)
+
+(deftest read-list
+  (is (= '() (read-string "()")))
+  (is (= '(foo bar) (read-string "(foo bar)")))
+  (is (= '(foo (bar) baz) (read-string "(foo (bar) baz)")))
+)
+
+(deftest read-vector
+  (is (= '[] (read-string "[]")))
+  (is (= '[foo bar] (read-string "[foo bar]")))
+  (is (= '[foo [bar] baz] (read-string "[foo [bar] baz]")))
+)
+
+(deftest read-map
+  (is (= '{} (read-string "{}")))
+  (is (= '{foo bar} (read-string "{foo bar}")))
+  (is (= '{foo {bar baz}} (read-string "{foo {bar baz}}")))
+)
+
+(deftest read-set
+  (is (= '#{} (read-string "#{}")))
+  (is (= '#{foo bar} (read-string "#{foo bar}")))
+  (is (= '#{foo #{bar} baz} (read-string "#{foo #{bar} baz}")))
+)
+
 (enable-console-print!)
 (run-tests)
