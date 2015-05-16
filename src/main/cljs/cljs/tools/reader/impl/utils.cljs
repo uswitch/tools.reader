@@ -6,7 +6,7 @@
 ;;   the terms of this license.
 ;;   You must not remove this notice, or any other, from this software.
 
-(ns clojure.tools.reader.impl.utils
+(ns cljs.tools.reader.impl.utils
     (:refer-clojure :exclude [char])
     (:require
      [clojure.string :as string]))
@@ -14,7 +14,7 @@
 
 (defn char [x]
   (when x
-    (clojure.core/char x)))
+    (cljs.core/char x)))
 
 ;; getColumnNumber and *default-data-reader-fn* are available only since clojure-1.5.0-beta1
 

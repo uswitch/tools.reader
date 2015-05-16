@@ -1,4 +1,4 @@
-(ns clojure.tools.reader.impl.core)
+(ns cljs.tools.reader.impl.core)
 
 (def Exception js/Error)
 

@@ -8,20 +8,20 @@
 
 (ns ^{:doc "A clojure reader in clojure"
       :author "Bronsa"}
-  clojure.tools.reader
+  cljs.tools.reader
   (:refer-clojure :exclude [read read-line read-string char
                             default-data-readers *default-data-reader-fn*
                             *read-eval* *data-readers* *suppress-read*])
-  (:require-macros [clojure.tools.reader.reader-types :refer [log-source]])
+  (:require-macros [cljs.tools.reader.reader-types :refer [log-source]])
   (:require
-   [clojure.tools.reader.reader-types :refer
+   [cljs.tools.reader.reader-types :refer
     [read-char reader-error unread peek-char indexing-reader?
      get-line-number get-column-number get-file-name string-push-back-reader]]
-   [clojure.tools.reader.impl.utils :refer
+   [cljs.tools.reader.impl.utils :refer
     [char ex-info? whitespace? numeric? desugar-meta]]
-   [clojure.tools.reader.impl.commons :refer
+   [cljs.tools.reader.impl.commons :refer
     [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
-   [clojure.tools.reader.impl.core :refer
+   [cljs.tools.reader.impl.core :refer
     [Exception IllegalArgumentException IllegalStateException
      RuntimeException string-builder integer-to-string
      persistent-list-create

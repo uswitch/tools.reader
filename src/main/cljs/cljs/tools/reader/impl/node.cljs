@@ -1,12 +1,13 @@
-(ns clojure.tools.reader.impl.node
+(ns cljs.tools.reader.impl.node
+  (:refer-clojure :exclude [read])
   (:require
-   [clojure.tools.reader :refer [read]]
-   [clojure.tools.reader.reader-types
+   [cljs.tools.reader :refer [read]]
+   [cljs.tools.reader.reader-types
     :refer [Reader IPushbackReader read-char peek-char unread]]))
 
 (enable-console-print!)
 
-(def fs (js/require "fs"))
+#_(def fs (js/require "fs"))
 
 (deftype NodePushbackReader [readable]
   Reader
@@ -20,9 +21,9 @@
   (unread [_ char]
     (.unshift readable char)))
 
-(def reader (.createReadStream fs "/tmp/test.clj"))
+#_(def reader (.createReadStream fs "/tmp/test.clj"))
 
-(def node-reader (NodePushbackReader. reader))
+#_(def node-reader (NodePushbackReader. reader))
 
-(defn do-read []
-  (clojure.tools.reader/read node-reader false nil))
+#_(defn do-read []
+  (read node-reader false nil))
