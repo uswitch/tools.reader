@@ -62,5 +62,21 @@
     )
 )
 
+(deftest read-floating
+  (is (== 42.23 (read-string "42.23")))
+  (is (== +42.23 (read-string "+42.23")))
+  (is (== -42.23 (read-string "-42.23")))
+
+  (is (== 42.2e3 (read-string "42.2e3")))
+  (is (== +42.2e+3 (read-string "+42.2e+3")))
+  (is (== -42.2e-3 (read-string "-42.2e-3")))
+)
+
+#_(deftest read-ratio
+  (is (== 4/2 (read-string "4/2")))
+  (is (== 4/2 (read-string "+4/2")))
+  (is (== -4/2 (read-string "-4/2")))
+)
+
 (enable-console-print!)
 (run-tests)
