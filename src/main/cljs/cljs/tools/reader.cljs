@@ -105,6 +105,12 @@
                 (append sb ch)))
             (recur (read-char rdr))))))))
 
+(defn- char-code [ch base]
+  (let [code (js/parseInt ch base)]
+    (if (js/isNaN code)
+      -1
+      code)))
+
 (defn- read-unicode-char
   ([token offset length base]
      (let [l (+ offset length)]
@@ -112,14 +118,14 @@
          (throw (IllegalArgumentException. (str "Invalid unicode character: \\" token))))
        (loop [i offset uc 0]
          (if (== i l)
-           (char uc)
-           (let [d (char-digit (int (nth token i)) (int base))]
+           (js/String.fromCharCode uc)
+           (let [d (char-code (nth token i) base)]
              (if (== d -1)
                (throw (IllegalArgumentException. (str "Invalid digit: " (nth token i))))
-               (recur (inc i) (long (+ d (* uc base))))))))))
+               (recur (inc i) (+ d (* uc base)))))))))
 
   ([rdr initch base length exact?]
-     (loop [i 1 uc (char-digit (int initch) (int base))]
+     (loop [i 1 uc (char-code initch base)]
        (if (== uc -1)
          (throw (IllegalArgumentException. (str "Invalid digit: " initch)))
          (if-not (== i length)
@@ -130,16 +136,19 @@
                (if exact?
                  (throw (IllegalArgumentException.
                          (str "Invalid character length: " i ", should be: " length)))
-                 (char uc))
-               (let [d (char-digit (int ch) (int base))]
+                 (js/String.fromCharCode uc))
+               (let [d (char-code ch base)]
                  (read-char rdr)
                  (if (== d -1)
                    (throw (IllegalArgumentException. (str "Invalid digit: " ch)))
-                   (recur (inc i) (long (+ d (* uc base))))))))
-           (char uc))))))
+                   (recur (inc i) (+ d (* uc base)))))))
+           (js/String.fromCharCode uc))))))
 
-(def ^:private ^:const upper-limit (int \uD7ff))
-(def ^:private ^:const lower-limit (int \uE000))
+(def ^:private ^:const upper-limit (.charCodeAt \uD7ff 0))
+(def ^:private ^:const lower-limit (.charCodeAt \uE000 0))
+
+(defn- valid-octal? [token base]
+  (<= (js/parseInt token base) 0377))
 
 (defn- read-char*
   "Read in a character literal"
@@ -162,20 +171,22 @@
          (= token "formfeed") \formfeed
          (= token "return") \return
 
-         (.startsWith token "u")
+         (re-find #"^u" token)
          (let [c (read-unicode-char token 1 4 16)
-               ic (int c)]
+               ic (.charCodeAt c 0)]
            (if (and (> ic upper-limit)
                     (< ic lower-limit))
-             (reader-error rdr "Invalid character constant: \\u" (integer-to-string ic 16))
+             (reader-error rdr "Invalid character constant: \\u" c)
              c))
 
-         (.startsWith token "o")
+         (re-find #"^o" token)
          (let [len (dec token-len)]
            (if (> len 3)
              (reader-error rdr "Invalid octal escape sequence length: " len)
-             (let [uc (read-unicode-char token 1 len 8)]
-               (if (> (int uc) 0377)
+             (let [offset 1
+                   base 8
+                   uc (read-unicode-char token offset len base)]
+               (if-not (valid-octal? (subs token offset) base)
                  (reader-error rdr "Octal escape sequence must be in range [0, 377]")
                  uc))))
 
