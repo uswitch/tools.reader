@@ -8,9 +8,8 @@
 
 (ns cljs.tools.reader.impl.utils
     (:refer-clojure :exclude [char])
-    (:require
-     [clojure.string :as string]))
-
+    (:require [clojure.string :as string]
+              [goog.string :as gstring]))
 
 (defn char [x]
   (when x
@@ -81,14 +80,14 @@
   "Checks whether a given character is whitespace"
   [ch]
   (when ch
-    (or (re-find #"\s" ch)
+    (or (gstring/isSpace ch)
         (identical? \,  ch))))
 
 (defn numeric?
   "Checks whether a given character is numeric"
   [ch]
   (when ch
-    (re-find #"\d" ch)))
+    (gstring/isNumeric ch)))
 
 (defn newline?
   "Checks whether the character is a newline"

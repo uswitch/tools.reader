@@ -35,6 +35,31 @@
   (is (== -888 (js/parseInt "-0888" 10) (read-string "-0888")))
   (is (== 4984 (js/parseInt "04984" 10) (read-string "04984")))
   (is (== -4984 (js/parseInt "-04984" 10) (read-string "-04984")))
+
+  (comment
+    ;;TODO: Do we want to enable binary numbers? It's an easy addition, and
+    ;; they are available in chrome already
+
+    ;;binary
+    (is (== 2147483648
+            (js/parseInt "10000000000000000000000000000000" 2)
+            (read-string "0b10000000000000000000000000000000")))
+    (is (== -2147483648
+            (js/parseInt "-10000000000000000000000000000000" 2)
+            (read-string "-0b10000000000000000000000000000000")))
+    (is (== 2139095040
+            (js/parseInt "01111111100000000000000000000000" 2)
+            (read-string "0b01111111100000000000000000000000")))
+    (is (== -2139095040
+            (js/parseInt "-01111111100000000000000000000000" 2)
+            (read-string "-0b01111111100000000000000000000000")))
+    (is (== 8388607
+            (js/parseInt "00000000011111111111111111111111" 2)
+            (read-string "0B00000000011111111111111111111111")))
+    (is (== -8388607
+            (js/parseInt "-00000000011111111111111111111111" 2)
+            (read-string "-0B00000000011111111111111111111111")))
+    )
 )
 
 (enable-console-print!)
