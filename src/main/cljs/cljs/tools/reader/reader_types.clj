@@ -8,10 +8,7 @@
 
 (ns ^{:doc "Protocols and default Reader types implementation"
       :author "Bronsa"}
-  cljs.tools.reader.reader-types
-  #_(:refer-clojure :exclude [read-line])
-  #_(:require [cljs.tools.reader.impl.utils  :as utiles #_:refer
-             #_[whitespace? newline? make-var]]))
+  cljs.tools.reader.reader-types)
 
 (defmacro log-source
   "If reader is a SourceLoggingPushbackReader, execute body in a source
