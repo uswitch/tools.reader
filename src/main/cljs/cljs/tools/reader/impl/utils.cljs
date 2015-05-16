@@ -6,15 +6,14 @@
 ;;   the terms of this license.
 ;;   You must not remove this notice, or any other, from this software.
 
-(ns clojure.tools.reader.impl.utils
+(ns cljs.tools.reader.impl.utils
     (:refer-clojure :exclude [char])
-    (:require
-     [clojure.string :as string]))
-
+    (:require [clojure.string :as string]
+              [goog.string :as gstring]))
 
 (defn char [x]
   (when x
-    (clojure.core/char x)))
+    (cljs.core/char x)))
 
 ;; getColumnNumber and *default-data-reader-fn* are available only since clojure-1.5.0-beta1
 
@@ -81,14 +80,14 @@
   "Checks whether a given character is whitespace"
   [ch]
   (when ch
-    (or (re-find #"\s" ch)
+    (or (gstring/isSpace ch)
         (identical? \,  ch))))
 
 (defn numeric?
   "Checks whether a given character is numeric"
   [ch]
   (when ch
-    (re-find #"\d" ch)))
+    (gstring/isNumeric ch)))
 
 (defn newline?
   "Checks whether the character is a newline"

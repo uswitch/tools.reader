@@ -6,11 +6,11 @@
 ;;   the terms of this license.
 ;;   You must not remove this notice, or any other, from this software.
 
-(ns clojure.tools.reader.impl.commons
+(ns cljs.tools.reader.impl.commons
   (:refer-clojure :exclude [char])
   (:require
-   [clojure.tools.reader.reader-types :refer [peek-char read-char reader-error]]
-   [clojure.tools.reader.impl.utils :refer [numeric? newline? char]]))
+   [cljs.tools.reader.reader-types :refer [peek-char read-char reader-error]]
+   [cljs.tools.reader.impl.utils :refer [numeric? newline? char]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; helpers
@@ -40,21 +40,21 @@
       (recur)))
   reader)
 
-(def int-pattern #"([-+]?)(?:(0)|([1-9][0-9]*)|0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+)|0[0-9]+)(N)?")
-(def ratio-pattern #"([-+]?[0-9]+)/([0-9]+)")
+(def int-pattern #"^([-+]?)(?:(0)|([1-9][0-9]*)|0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+)|(0[0-9]+))(N)?$")
 (def float-pattern #"([-+]?[0-9]+(\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?")
 
 (defn- match-int
   [s]
   (let [m (vec (re-find int-pattern s))]
     (if (m 2)
-      (if (m 8) 0N 0)
+      0
       (let [negate? (= "-" (m 1))
             a (cond
                 (m 3) [(m 3) 10]
                 (m 4) [(m 4) 16]
                 (m 5) [(m 5) 8]
                 (m 7) [(m 7) (js/parseInt (m 6))]
+                (m 8) [(m 8) 10]
                 :else        [nil nil])
             n (a 0)
             radix (int (a 1))]
@@ -63,7 +63,7 @@
                 bn (if negate? (* -1 bn) bn)]
             bn))))))
 
-(defn- match-ratio
+#_(defn- match-ratio
   [s]
   (let [m (vec (re-find ratio-pattern s))
         numerator (m 1)
@@ -90,7 +90,7 @@
     (match-int s)
     (if (matches? float-pattern s)
       (match-float s)
-      (when (matches? ratio-pattern s)
+      #_(when (matches? ratio-pattern s)
         (match-ratio s)))))
 
 (defn parse-symbol

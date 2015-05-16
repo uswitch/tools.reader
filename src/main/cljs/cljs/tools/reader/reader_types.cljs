@@ -8,15 +8,15 @@
 
 (ns ^{:doc "Protocols and default Reader types implementation"
       :author "Bronsa"}
-  clojure.tools.reader.reader-types
+  cljs.tools.reader.reader-types
   (:refer-clojure :exclude [char read-line])
   (:require-macros
-   [clojure.tools.reader.impl.utils :refer [compile-if]]
-   [clojure.tools.reader.reader-types :refer [update!]])
+   [cljs.tools.reader.impl.utils :refer [compile-if]]
+   [cljs.tools.reader.reader-types :refer [update!]])
   (:require
-   [clojure.tools.reader.impl.utils :refer
+   [cljs.tools.reader.impl.utils :refer
     [char whitespace? newline? make-var]]
-   [clojure.tools.reader.impl.core :refer
+   [cljs.tools.reader.impl.core :refer
     [RuntimeException StringBuilder string-builder append]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

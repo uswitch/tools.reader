@@ -8,17 +8,14 @@
 
 (ns ^{:doc "Protocols and default Reader types implementation"
       :author "Bronsa"}
-  clojure.tools.reader.reader-types
-  (:refer-clojure :exclude [char read-line])
-  (:require [clojure.tools.reader.impl.utils :refer
-             [char whitespace? newline? make-var]]))
+  cljs.tools.reader.reader-types)
 
 (defmacro log-source
   "If reader is a SourceLoggingPushbackReader, execute body in a source
   logging context. Otherwise, execute body, returning the result."
   [reader & body]
-  `(if (and (source-logging-reader? ~reader)
-            (not (whitespace? (peek-char ~reader))))
+  `(if (and (cljs.tools.reader.reader-types/source-logging-reader? ~reader)
+            (not (cljs.tools.reader.impl.utils/whitespace? (cljs.tools.reader.impl.utils/peek-char ~reader))))
      (do ~@body)
      (do ~@body)))
 

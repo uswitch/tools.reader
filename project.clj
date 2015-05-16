@@ -18,9 +18,18 @@
   :aliases {"test-all" ["with-profile" "test,1.4:test,1.5:test,1.6:test,1.7" "test"]
             "check-all" ["with-profile" "1.4:1.5:1.6:1.7" "check"]}
   :min-lein-version "2.0.0"
-  :cljsbuild {:builds [{:id "dev"
-                        :source-paths ["src/main/clojurescript"]
+  :cljsbuild {:test-commands {"test" ["node" :runner "resources/test/tools.reader.test.js"]}
+              :builds [{:id "dev"
+                        :source-paths ["src/main/cljs"]
                         :compiler {:output-to "out/main.js"
                                    :output-dir "out"
                                    :optimizations :simple
-                                   :pretty-print true}}]})
+                                   :pretty-print true}}
+                       {:id "test"
+                        :source-paths ["src/main/cljs" "src/test/cljs"]
+                        :notify-command ["node" "resources/test/tools.reader.test.js"]
+                        :compiler
+                        {:output-to  "resources/test/tools.reader.test.js"
+                         :source-map "resources/test/tools.reader.test.js.map"
+                         :output-dir "resources/test/out"
+                         :optimizations :simple}}]})
