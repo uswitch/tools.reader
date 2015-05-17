@@ -183,7 +183,6 @@
              c))
 
          (starts-with? token "o")
-         (re-find #"^o" token)
          (let [len (dec token-len)]
            (if (> len 3)
              (reader-error rdr "Invalid octal escape sequence length: " len)
@@ -198,11 +197,11 @@
       (reader-error rdr "EOF while reading character"))))
 
 (defn ^:private starting-line-col-info [rdr]
-  (when false ;(indexing-reader? rdr)
+  (when (indexing-reader? rdr)
     [(get-line-number rdr) (int (dec (get-column-number rdr)))]))
 
 (defn ^:private ending-line-col-info [rdr]
-  (when false ;(indexing-reader? rdr)
+  (when (indexing-reader? rdr)
     [(get-line-number rdr) (get-column-number rdr)]))
 
 (defonce ^:private READ_EOF (js/Object.))
@@ -936,14 +935,14 @@
                (throw (ex-info (.-message e)
                                (merge {:type :reader-exception}
                                       d
-                                      #_(if (indexing-reader? reader)
+                                      (if (indexing-reader? reader)
                                         {:line   (get-line-number reader)
                                          :column (get-column-number reader)
                                          :file   (get-file-name reader)}))
                                e))))
            (throw (ex-info (.-message e)
                            (merge {:type :reader-exception}
-                                  #_(if (indexing-reader? reader)
+                                  (if (indexing-reader? reader)
                                     {:line   (get-line-number reader)
                                      :column (get-column-number reader)
                                      :file   (get-file-name reader)}))

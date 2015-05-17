@@ -209,7 +209,7 @@ logging frames. Called when pushing a character back."
 (defn indexing-reader?
   "Returns true if the reader satisfies IndexingReader"
   [rdr]
-  (instance? IndexingReader rdr))
+  (satisfies? IndexingReader rdr))
 
 (defn string-reader
   "Creates a StringReader from a given string"
