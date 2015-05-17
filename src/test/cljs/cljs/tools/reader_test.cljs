@@ -72,7 +72,7 @@
   (is (== -42.2e-3 (read-string "-42.2e-3")))
 )
 
-#_(deftest read-ratio
+(deftest read-ratio
   (is (== 4/2 (read-string "4/2")))
   (is (== 4/2 (read-string "+4/2")))
   (is (== -4/2 (read-string "-4/2")))
@@ -146,6 +146,46 @@
   (is (= '#{foo bar} (read-string "#{foo bar}")))
   (is (= '#{foo #{bar} baz} (read-string "#{foo #{bar} baz}")))
 )
+
+(def *ns* 'user)
+
+(deftest read-keyword
+  (is (= :foo-bar (read-string ":foo-bar")))
+  (is (= :foo/bar (read-string ":foo/bar")))
+  (is (= :user/foo-bar (read-string "::foo-bar")))
+  ;; (is (= :clojure.core/foo-bar (do (alias 'core 'clojure.core) (read-string "::core/foo-bar"))))
+  (is (= :*+!-_? (read-string ":*+!-_?")))
+  (is (= :abc:def:ghi (read-string ":abc:def:ghi")))
+  (is (= :abc.def/ghi (read-string ":abc.def/ghi")))
+  (is (= :abc/def.ghi (read-string ":abc/def.ghi")))
+  (is (= :abc:def/ghi:jkl.mno (read-string ":abc:def/ghi:jkl.mno")))
+  (is (instance? cljs.core.Keyword (read-string ":alphabet"))) )
+
+(deftest read-regex
+  (is (= (str #"\[\]?(\")\\")
+         (str (read-string "#\"\\[\\]?(\\\")\\\\\"")))))
+
+(deftest read-quote
+  (is (= ''foo (read-string "'foo"))))
+
+#_(deftest read-syntax-quote ;;; can't do syntax quote yet - need namespace resolution
+  (is (= '`user/foo (binding [*ns* (the-ns 'user)]
+                      (read-string "`foo"))))
+  (is (= () (eval (read-string "`(~@[])"))))
+  (is (= '`+ (read-string "`+")))
+  (is (= '`foo/bar (read-string "`foo/bar")))
+  (is (= '`1 (read-string "`1")))
+  (is (= `(1 (~2 ~@'(3))) (eval (read-string "`(1 (~2 ~@'(3)))")))))
+
+(deftest read-deref
+  (is (= '@foo (read-string "@foo"))))
+
+(deftest read-var
+  (is (= '(var foo) (read-string "#'foo"))))
+
+#_(deftest read-fn ;; need thread-bound? (or the functionality required) to do this
+  (is (= '(fn* [] (foo bar baz)) (read-string "#(foo bar baz)"))))
+
 
 (enable-console-print!)
 (run-tests)
