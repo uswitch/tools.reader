@@ -41,6 +41,7 @@
   reader)
 
 (def int-pattern #"^([-+]?)(?:(0)|([1-9][0-9]*)|0[xX]([0-9A-Fa-f]+)|0([0-7]+)|([1-9][0-9]?)[rR]([0-9A-Za-z]+)|(0[0-9]+))(N)?$")
+(def ratio-pattern #"([-+]?[0-9]+)/([0-9]+)")
 (def float-pattern #"([-+]?[0-9]+(\.[0-9]*)?([eE][-+]?[0-9]+)?)(M)?")
 
 (defn- match-int
@@ -63,7 +64,7 @@
                 bn (if negate? (* -1 bn) bn)]
             bn))))))
 
-#_(defn- match-ratio
+(defn- match-ratio
   [s]
   (let [m (vec (re-find ratio-pattern s))
         numerator (m 1)
@@ -90,7 +91,7 @@
     (match-int s)
     (if (matches? float-pattern s)
       (match-float s)
-      #_(when (matches? ratio-pattern s)
+      (when (matches? ratio-pattern s)
         (match-ratio s)))))
 
 (defn parse-symbol
