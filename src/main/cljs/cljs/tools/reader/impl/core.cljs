@@ -146,7 +146,14 @@
   (concat! [_ x]
     (swap! state concat x))
   (prepend! [_ x]
-    (swap! state (partial concat x))))
+    (swap! state (partial concat x)))
+  ISeq
+  (-first [_]
+    (first @state))
+  (-rest [_]
+    (rest @state))
+  ISeqable
+  (-seq [_] @state))
 
 (defn mutable-list [& args]
-  (MutableList. args))
+  (MutableList. (atom args)))
