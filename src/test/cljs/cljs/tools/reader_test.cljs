@@ -169,13 +169,13 @@
   (is (= ''foo (read-string "'foo"))))
 
 #_(deftest read-syntax-quote ;;; can't do syntax quote yet - need namespace resolution
-  (is (= '`user/foo (binding [*ns* (the-ns 'user)]
-                      (read-string "`foo"))))
-  (is (= () (eval (read-string "`(~@[])"))))
+  (is (= '`user/foo (read-string "`foo"))) ;;  (binding [*ns* (the-ns 'user)] (read-string "`foo"))
+  ;; (is (= () (eval (read-string "`(~@[])")))) ;;; no-eval
   (is (= '`+ (read-string "`+")))
   (is (= '`foo/bar (read-string "`foo/bar")))
   (is (= '`1 (read-string "`1")))
-  (is (= `(1 (~2 ~@'(3))) (eval (read-string "`(1 (~2 ~@'(3)))")))))
+  ;;;(is (= `(1 (~2 ~@'(3))) (eval (read-string "`(1 (~2 ~@'(3)))")))) ;;; no eval
+  )
 
 (deftest read-deref
   (is (= '@foo (read-string "@foo"))))
