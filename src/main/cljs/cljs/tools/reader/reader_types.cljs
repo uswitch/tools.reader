@@ -16,8 +16,9 @@
   (:require
    [cljs.tools.reader.impl.utils :refer
     [char whitespace? newline? make-var]]
-   [cljs.tools.reader.impl.core :refer
-    [RuntimeException StringBuilder string-builder append]]))
+   [cljs.tools.reader.impl.core :refer [RuntimeException]])
+  (:import
+   [goog.string StringBuffer]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reader protocols
@@ -143,14 +144,14 @@ logging frame."
   "Logs `char` to all currently active source logging frames."
   [source-log-frames char]
   (when-let [buffer (:buffer @source-log-frames)]
-    (append buffer char)))
+    (.append buffer char)))
 
 (defn- drop-last-logged-char
   "Removes the last logged character from all currently active source
 logging frames. Called when pushing a character back."
   [source-log-frames]
   (when-let [buffer (:buffer @source-log-frames)]
-    (.deleteCharAt buffer (dec (.length buffer)))))
+    (.deleteCharAt buffer (dec (.getLength buffer)))))
 
 (deftype SourceLoggingPushbackReader
     [rdr ^:unsynchronized-mutable line ^:unsynchronized-mutable column
@@ -189,17 +190,17 @@ logging frames. Called when pushing a character back."
   (get-column-number [reader] (int column))
   (get-file-name [reader] file-name))
 
-;; (comment 
-;;   (defn log-source*
-;;    [reader f]
-;;    (let [frame (.source-log-frames reader)
-;;          buffer (:buffer @frame)
-;;          new-frame (assoc-in @frame [:offset] (.length buffer))]
-;;      (binding [frame new-frame]
-;;        (let [ret (f)]
-;;          (if (instance? clojure.lang.IMeta ret)
-;;            (merge-meta ret {:source (peek-source-log frame)})
-;;            ret))))))
+(defn log-source*
+  [reader f]
+  (let [frame (.-source-log-frames reader)
+        _ (.log js/console frame)
+        buffer (:buffer @frame)
+        new-frame (assoc-in @frame [:offset] (.getLength buffer))]
+    (let [frame new-frame]
+      (let [ret (f)]
+        (if (instance? clojure.lang.IMeta ret)
+          (merge-meta ret {:source (peek-source-log frame)})
+          ret)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public API
@@ -248,17 +249,15 @@ logging frames. Called when pushing a character back."
       nil
       0
       file-name
-      (doto (make-var)
-        ;;(alter-var-root (constantly {:buffer (string-builder) :offset 0}))
-        ))))
+      (atom {:buffer (StringBuffer.) :offset 0}))))
 
 (defn read-line
   "Reads a line from the reader or from *in* if no reader is specified"
   ([rdr]
-   (loop [c (read-char rdr) s (string-builder)]
+   (loop [c (read-char rdr) s (StringBuffer.)]
      (if (newline? c)
        (str s)
-       (recur (read-char rdr) (append s c))))))
+       (recur (read-char rdr) (.append s c))))))
 
 (defn reader-error
   "Throws an ExceptionInfo with the given message.

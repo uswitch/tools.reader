@@ -15,11 +15,9 @@
   logging context. Otherwise, execute body, returning the result."
   [reader & body]
   `(if (and (cljs.tools.reader.reader-types/source-logging-reader? ~reader)
-            (not (cljs.tools.reader.impl.utils/whitespace? (cljs.tools.reader.impl.utils/peek-char ~reader))))
-     (do ~@body)
+            (not (cljs.tools.reader.impl.utils/whitespace? (peek-char ~reader))))
+     (log-source* ~reader (^:once fn* [] ~@body))
      (do ~@body)))
-
-;; (log-source* ~reader (^:once fn* [] ~@body))
 
 (defmacro update! [what f]
   (list 'set! what (list f what)))

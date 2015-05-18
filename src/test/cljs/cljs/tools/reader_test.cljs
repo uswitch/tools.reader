@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [read-string])
   (:require
     [cljs.test :as t :refer-macros [deftest is run-tests]]
-    [cljs.tools.reader :refer [*data-readers* read-string]]))
+    [cljs.tools.reader :as reader :refer [*data-readers* read-string]]))
 
 ;;==============================================================================
 ;; common_tests.clj
@@ -152,8 +152,8 @@
 (deftest read-keyword
   (is (= :foo-bar (read-string ":foo-bar")))
   (is (= :foo/bar (read-string ":foo/bar")))
-  (is (= :user/foo-bar (read-string "::foo-bar")))
-  ;; (is (= :clojure.core/foo-bar (do (alias 'core 'clojure.core) (read-string "::core/foo-bar"))))
+  ;; (is (= '::foo-bar (namespace (read-string "::foo-bar"))))
+  ;; (is (= ^:resolve-ns :core/foo-bar (read-string "::core/foo-bar")))
   (is (= :*+!-_? (read-string ":*+!-_?")))
   (is (= :abc:def:ghi (read-string ":abc:def:ghi")))
   (is (= :abc.def/ghi (read-string ":abc.def/ghi")))
@@ -226,6 +226,8 @@
   (is (= (bar. 1 nil) (read-string "#clojure.tools.reader_test.bar{:baz 1}")))
   (is (= (bar. 1 nil) (read-string "#clojure.tools.reader_test.bar[1 nil]")))
   (is (= (bar. 1 2) (read-string "#clojure.tools.reader_test.bar[1 2]"))))
+
+(prn (reader/read (cljs.tools.reader.reader-types/source-logging-push-back-reader "(def test 8)\n(def test2 9)")))
 
 (enable-console-print!)
 (run-tests)
