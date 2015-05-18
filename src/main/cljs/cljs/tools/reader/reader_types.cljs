@@ -151,7 +151,7 @@ logging frame."
 logging frames. Called when pushing a character back."
   [source-log-frames]
   (when-let [buffer (:buffer @source-log-frames)]
-    (.deleteCharAt buffer (dec (.getLength buffer)))))
+    (.set buffer (subs (str buffer) 0 (dec (.getLength buffer))))))
 
 (deftype SourceLoggingPushbackReader
     [rdr ^:unsynchronized-mutable line ^:unsynchronized-mutable column
@@ -193,12 +193,11 @@ logging frames. Called when pushing a character back."
 (defn log-source*
   [reader f]
   (let [frame (.-source-log-frames reader)
-        _ (.log js/console frame)
         buffer (:buffer @frame)
         new-frame (assoc-in @frame [:offset] (.getLength buffer))]
     (let [frame new-frame]
       (let [ret (f)]
-        (if (instance? clojure.lang.IMeta ret)
+        (if (satisfies? cljs.core.IMeta ret)
           (merge-meta ret {:source (peek-source-log frame)})
           ret)))))
 
