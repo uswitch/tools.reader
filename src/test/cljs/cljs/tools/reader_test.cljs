@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [read-string])
   (:require
     [cljs.test :as t :refer-macros [deftest is run-tests]]
-    [cljs.tools.reader :refer [read-string]]))
+    [cljs.tools.reader :refer [*data-readers* read-string]]))
 
 ;;==============================================================================
 ;; common_tests.clj
@@ -186,6 +186,46 @@
 #_(deftest read-fn ;; need thread-bound? (or the functionality required) to do this
   (is (= '(fn* [] (foo bar baz)) (read-string "#(foo bar baz)"))))
 
+(defn inst [s]
+  (js/Date. s))
+
+(defn uuid [s]
+  (cljs.core.UUID. s nil))
+
+(deftest read-tagged
+  (binding [*data-readers* {'inst inst 'uuid uuid}]
+    (is (= #inst "2010-11-12T13:14:15.666"
+           (read-string "#inst \"2010-11-12T13:14:15.666\"")))
+    (is (= #inst "2010-11-12T13:14:15.666"
+           (read-string "#inst\"2010-11-12T13:14:15.666\"")))
+    ;; (is (= #uuid "550e8400-e29b-41d4-a716-446655440000"
+    ;;        (read-string "#uuid \"550e8400-e29b-41d4-a716-446655440000\"")))
+    ;; (is (= #uuid "550e8400-e29b-41d4-a716-446655440000"
+    ;;        (read-string "#uuid\"550e8400-e29b-41d4-a716-446655440000\"")))
+    (is (= (uuid "550e8400-e29b-41d4-a716-446655440000")
+           (read-string "#uuid \"550e8400-e29b-41d4-a716-446655440000\"")))
+    (is (= (uuid "550e8400-e29b-41d4-a716-446655440000")
+           (read-string "#uuid\"550e8400-e29b-41d4-a716-446655440000\"")))
+    #_(when *default-data-reader-fn*
+      (let [my-unknown (fn [tag val] {:unknown-tag tag :value val})]
+        (is (= {:unknown-tag 'foo :value 'bar}
+               (binding [*default-data-reader-fn* my-unknown]
+                 (read-string "#foo bar"))))))))
+
+(defrecord foo [])
+(defrecord bar [baz buz])
+
+#_(deftest read-record
+  (prn 'clojure.tools.reader_test.foo.)
+  (is (= (foo.) (read-string "#clojure.tools.reader_test.foo[]")))
+  (is (= (foo.) (read-string "#clojure.tools.reader_test.foo []"))) ;; not valid in clojure
+  (is (= (foo.) (read-string "#clojure.tools.reader_test.foo{}")))
+  (is (= (assoc (foo.) :foo 'bar) (read-string "#clojure.tools.reader_test.foo{:foo bar}")))
+
+  (is (= (map->bar {}) (read-string "#clojure.tools.reader_test.bar{}")))
+  (is (= (bar. 1 nil) (read-string "#clojure.tools.reader_test.bar{:baz 1}")))
+  (is (= (bar. 1 nil) (read-string "#clojure.tools.reader_test.bar[1 nil]")))
+  (is (= (bar. 1 2) (read-string "#clojure.tools.reader_test.bar[1 2]"))))
 
 (enable-console-print!)
 (run-tests)

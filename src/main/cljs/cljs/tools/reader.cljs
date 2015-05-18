@@ -765,7 +765,7 @@
       (if-let [f (or (*data-readers* tag)
                      (default-data-readers tag))]
         (f (read* rdr true nil opts pending-forms))
-        (if (.contains (name tag) ".")
+        (if (> (.indexOf (name tag) ".") 1)
           (comment (read-ctor rdr tag opts pending-forms))
           (if-let [f *default-data-reader-fn*]
             (f tag (read* rdr true nil opts pending-forms))
