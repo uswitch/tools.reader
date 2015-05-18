@@ -30,8 +30,8 @@
      char-digit
      char-value-of
      append
-     starts-with?
-     ]]))
+     ]]
+   [goog.string :as gs]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; helpers
@@ -150,7 +150,7 @@
          (= token "formfeed") \formfeed
          (= token "return") \return
 
-         (starts-with? token "u")
+         (gs/startsWith token "u")
          (let [c (read-unicode-char token 1 4 16)
                ic (int c)]
            (if (and (> ic upper-limit)
@@ -158,7 +158,7 @@
              (reader-error rdr "Invalid character constant: \\u" (integer-to-string ic 16))
              c))
 
-         (starts-with? token "o")
+         (gs/startsWith token "o")
          (let [len (dec token-len)]
            (if (> len 3)
              (reader-error rdr "Invalid octal escape sequence length: " len)

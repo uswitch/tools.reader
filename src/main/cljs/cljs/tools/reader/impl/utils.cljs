@@ -30,6 +30,9 @@
 (defn ex-info? [ex]
   (instance? cljs.core.ExceptionInfo ex))
 
+(defn starts-with? [s prefix]
+  (gstring/startsWith s prefix))
+
 #_(compile-if true ;pre-cljs-1243
 ;;; tagged-literal type arrived in CLJS-1243
 

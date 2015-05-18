@@ -25,10 +25,13 @@
     [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
    [cljs.tools.reader.impl.core :refer
     [Exception IllegalArgumentException IllegalStateException
-     RuntimeException string-builder integer-to-string
+     RuntimeException
      persistent-list-create persistent-hash-set-create-with-check
-     rt-next-id rt-map char-digit thread-bound?  append starts-with?
-     prepend! mutable-list]]))
+     rt-next-id rt-map char-digit thread-bound?
+     prepend! mutable-list]]
+   [goog.string :as gs])
+  (:import
+   [goog.string StringBuffer]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; helpers
@@ -54,14 +57,14 @@
   [rdr initch]
   (if-not initch
     (reader-error rdr "EOF while reading")
-    (loop [sb (string-builder) ch initch]
+    (loop [sb (StringBuffer.) ch initch]
       (if (or (whitespace? ch)
               (macro-terminating? ch)
               (nil? ch))
         (do (when ch
               (unread rdr ch))
             (str sb))
-        (recur (append sb ch) (read-char rdr))))))
+        (recur (.append sb ch) (read-char rdr))))))
 
 (declare read-tagged)
 
@@ -83,19 +86,19 @@
 
 (defn read-regex
   [rdr ch opts pending-forms]
-  (let [sb (string-builder)]
+  (let [sb (StringBuffer.)]
     (loop [ch (read-char rdr)]
       (if (identical? \" ch)
         (re-pattern (str sb))
         (if (nil? ch)
           (reader-error rdr "EOF while reading regex")
           (do
-            (append sb ch )
+            (.append sb ch )
             (when (identical? \\ ch)
               (let [ch (read-char rdr)]
                 (if (nil? ch)
                   (reader-error rdr "EOF while reading regex"))
-                (append sb ch)))
+                (.append sb ch)))
             (recur (read-char rdr))))))))
 
 (defn- char-code [ch base]
@@ -164,7 +167,7 @@
          (= token "formfeed") \formfeed
          (= token "return") \return
 
-         (starts-with? token "u")
+         (gs/startsWith token "u")
          (let [c (read-unicode-char token 1 4 16)
                ic (.charCodeAt c 0)]
            (if (and (> ic upper-limit)
@@ -172,7 +175,7 @@
              (reader-error rdr "Invalid character constant: \\u" c)
              c))
 
-         (starts-with? token "o")
+         (gs/startsWith token "o")
          (let [len (dec token-len)]
            (if (> len 3)
              (reader-error rdr "Invalid octal escape sequence length: " len)
@@ -270,14 +273,14 @@
 
 (defn- read-number
   [rdr initch]
-  (loop [sb (doto (string-builder) (append initch))
+  (loop [sb (doto (StringBuffer.) (.append initch))
          ch (read-char rdr)]
     (if (or (whitespace? ch) (macros ch) (nil? ch))
       (let [s (str sb)]
         (unread rdr ch)
         (or (match-number s)
             (reader-error rdr "Invalid number format [" s "]")))
-      (recur (doto sb (append ch)) (read-char rdr)))))
+      (recur (doto sb (.append ch)) (read-char rdr)))))
 
 (defn- escape-char [sb rdr]
   (let [ch (read-char rdr)]
@@ -302,14 +305,14 @@
 
 (defn- read-string*
   [reader _ opts pending-forms]
-  (loop [sb (string-builder)
+  (loop [sb (StringBuffer.)
          ch (read-char reader)]
     (case ch
       nil (reader-error reader "EOF while reading string")
-      \\ (recur (doto sb (append (escape-char sb reader)))
+      \\ (recur (doto sb (.append (escape-char sb reader)))
                 (read-char reader))
       \" (str sb)
-      (recur (doto sb (append ch)) (read-char reader)))))
+      (recur (doto sb (.append ch)) (read-char reader)))))
 
 (defn- read-symbol
   [rdr initch]
