@@ -1,6 +1,37 @@
 (ns cljs.tools.reader)
 
-(defn- syntax-quote* [form]
+(defn ^:private ns-name* [x]
+  (if (instance? clojure.lang.Namespace x)
+    (name (ns-name x))
+    (name x)))
+
+(defn ^:dynamic resolve-symbol
+  "Resolve a symbol s into its fully qualified namespace version"
+  [s]
+  (if (pos? (.indexOf (name s) "."))
+    s ;; If there is a period, it is interop
+    (if-let [ns-str (namespace s)]
+      (let [ns (resolve-ns (symbol ns-str))]
+        (if (or (nil? ns)
+                (= (ns-name* ns) ns-str)) ;; not an alias
+          s
+          (symbol (ns-name* ns) (name s))))
+      (if-let [o ((ns-map *ns*) s)]
+        (if (class? o)
+          (symbol (.getName o))
+          (if (var? o)
+            (symbol (-> o .ns ns-name*) (-> o .sym name))))
+        (symbol (ns-name* *ns*) (name s))))))
+
+(declare syntax-quote*)
+
+(defn- add-meta [form ret]
+  (if (and (instance? IWithMeta form)
+           (seq (dissoc (meta form) :line :column :end-line :end-column :file :source)))
+    (list 'clojure.core/with-meta ret (syntax-quote* (meta form)))
+    ret))
+
+(defmacro syntax-quote* [form]
   (->>
    (cond
      (special-symbol? form) (list 'quote form)
@@ -61,26 +92,3 @@
   [form]
   '(cljs.core/binding [cljs.tools.reader/gensym-env {}]
     (cljs.tools.reader/syntax-quote* ~form)))
-
-(defn ^:private ns-name* [x]
-  (if (instance? clojure.lang.Namespace x)
-    (name (ns-name x))
-    (name x)))
-
-(defn ^:dynamic resolve-symbol
-  "Resolve a symbol s into its fully qualified namespace version"
-  [s]
-  (if (pos? (.indexOf (name s) "."))
-    s ;; If there is a period, it is interop
-    (if-let [ns-str (namespace s)]
-      (let [ns (resolve-ns (symbol ns-str))]
-        (if (or (nil? ns)
-                (= (ns-name* ns) ns-str)) ;; not an alias
-          s
-          (symbol (ns-name* ns) (name s))))
-      (if-let [o ((ns-map *ns*) s)]
-        (if (class? o)
-          (symbol (.getName o))
-          (if (var? o)
-            (symbol (-> o .ns ns-name*) (-> o .sym name))))
-        (symbol (ns-name* *ns*) (name s))))))

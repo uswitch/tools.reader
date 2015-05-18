@@ -15,3 +15,5 @@
 ;;                 ;; :watch "dev"
 ;;                 ;; :output-dir "out"
 ;;                 )
+
+(cljs.core/enable-console-print!)

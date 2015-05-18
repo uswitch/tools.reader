@@ -13,7 +13,7 @@
                             default-data-readers *default-data-reader-fn*
                             *read-eval* *data-readers* *suppress-read*])
   (:require-macros
-   [cljs.tools.reader :refer [ns-name* resolve-symbol syntax-quote syntax-quote*]]
+   ;; [cljs.tools.reader :refer [syntax-quote syntax-quote*]]
    [cljs.tools.reader.reader-types :refer [log-source]])
   (:require
    [cljs.tools.reader.reader-types :refer
@@ -607,6 +607,7 @@
       ((wrapping-reader 'clojure.core/unquote) rdr \~ opts pending-forms))))
 
 (declare syntax-quote*)
+
 (defn- unquote-splicing? [form]
   (and (seq? form)
        (= (first form) 'clojure.core/unquote-splicing)))
@@ -651,12 +652,6 @@
         gs)))
 
 ;;; resolve-symbol -> clj macro as ns fns only available there
-
-(defn- add-meta [form ret]
-  (if (and (instance? IWithMeta form)
-           (seq (dissoc (meta form) :line :column :end-line :end-column :file :source)))
-    (list 'clojure.core/with-meta ret (syntax-quote* (meta form)))
-    ret))
 
 (defn- syntax-quote-coll [type coll]
   ;; We use sequence rather than seq here to fix http://dev.clojure.org/jira/browse/CLJ-1444
