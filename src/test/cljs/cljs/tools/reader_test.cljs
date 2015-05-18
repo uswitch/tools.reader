@@ -227,7 +227,16 @@
   (is (= (bar. 1 nil) (read-string "#clojure.tools.reader_test.bar[1 nil]")))
   (is (= (bar. 1 2) (read-string "#clojure.tools.reader_test.bar[1 2]"))))
 
-(prn (reader/read (cljs.tools.reader.reader-types/source-logging-push-back-reader "(def test 8)\n(def test2 9)")))
+(deftest source-logging-meta-test
+  (-> (loop [r (cljs.tools.reader.reader-types/source-logging-push-back-reader "(def test 8)\n(def test2 9)\n")
+             forms []]
+        (if-let [form (reader/read r false nil)]
+          (recur r (conj forms [(meta form) form]))
+          forms))
+      (= [[{:line 1 :column 1 :end-line 1 :end-column 13} '(def test 8)]
+          [{:line 2 :column 0 :end-line 2 :end-column 1}]
+          [{:line 2, :column 1, :end-line 2, :end-column 14} '(def test2 9)]
+          [{:line 3, :column 0, :end-line 3, :end-column 1}]])))
 
 (enable-console-print!)
 (run-tests)

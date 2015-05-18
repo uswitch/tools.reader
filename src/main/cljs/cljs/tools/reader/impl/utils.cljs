@@ -106,8 +106,3 @@
     (symbol? f)  {:tag f}
     (string? f)  {:tag f}
     :else        f))
-
-(defn make-var
-  "Returns an anonymous unbound Var"
-  []
-  (Var. nil nil nil))

@@ -14,8 +14,7 @@
    [cljs.tools.reader.impl.utils :refer [compile-if]]
    [cljs.tools.reader.reader-types :refer [update!]])
   (:require
-   [cljs.tools.reader.impl.utils :refer
-    [char whitespace? newline? make-var]]
+   [cljs.tools.reader.impl.utils :refer [char whitespace? newline?]]
    [cljs.tools.reader.impl.core :refer [RuntimeException]])
   (:import
    [goog.string StringBuffer]))
