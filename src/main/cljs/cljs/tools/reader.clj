@@ -5,13 +5,13 @@
     (name (ns-name x))
     (name x)))
 
-(defn ^:dynamic resolve-symbol
+#_(defn ^:dynamic resolve-symbol
   "Resolve a symbol s into its fully qualified namespace version"
   [s]
   (if (pos? (.indexOf (name s) "."))
     s ;; If there is a period, it is interop
     (if-let [ns-str (namespace s)]
-      (let [ns (resolve-ns (symbol ns-str))]
+      (let [ns (cljs.tools.reader/resolve-ns (symbol ns-str))]
         (if (or (nil? ns)
                 (= (ns-name* ns) ns-str)) ;; not an alias
           s
@@ -25,13 +25,13 @@
 
 (declare syntax-quote*)
 
-(defn- add-meta [form ret]
+#_(defn- add-meta [form ret]
   (if (and (instance? IWithMeta form)
            (seq (dissoc (meta form) :line :column :end-line :end-column :file :source)))
     (list 'clojure.core/with-meta ret (syntax-quote* (meta form)))
     ret))
 
-(defmacro syntax-quote* [form]
+#_(defmacro syntax-quote* [form]
   (->>
    (cond
      (special-symbol? form) (list 'quote form)
