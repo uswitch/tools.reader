@@ -26,8 +26,7 @@
    [cljs.tools.reader.impl.core :refer
     [Exception IllegalArgumentException IllegalStateException
      RuntimeException
-     persistent-list-create persistent-hash-set-create-with-check
-     rt-next-id rt-map char-digit thread-bound?
+     rt-next-id char-digit thread-bound?
      prepend! mutable-list]]
    [goog.string :as gs])
   (:import
@@ -223,7 +222,7 @@
         [end-line end-column] (ending-line-col-info rdr)]
     (with-meta (if (empty? the-list)
                  '()
-                 (persistent-list-create the-list))
+                 (apply list the-list))
       (when start-line
         (merge
          (when-let [file (get-file-name rdr)]
@@ -261,7 +260,7 @@
     (with-meta
       (if (zero? map-count)
         {}
-        (rt-map (to-array the-map)))
+        (apply hash-map (to-array the-map)))
       (when start-line
         (merge
          (when-let [file (get-file-name rdr)]
@@ -395,7 +394,7 @@
   (let [[start-line start-column] (starting-line-col-info rdr)
         ;; subtract 1 from start-column so it includes the # in the leading #{
         start-column (if start-column (int (dec start-column)))
-        the-set (persistent-hash-set-create-with-check (read-delimited \} rdr opts pending-forms))
+        the-set (set (read-delimited \} rdr opts pending-forms))
         [end-line end-column] (ending-line-col-info rdr)]
     (with-meta the-set
       (when start-line
