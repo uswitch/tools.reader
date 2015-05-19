@@ -183,7 +183,7 @@
 (deftest read-var
   (is (= '(var foo) (read-string "#'foo"))))
 
-#_(deftest read-fn ;; need thread-bound? (or the functionality required) to do this
+(deftest read-fn ;; need thread-bound? (or the functionality required) to do this
   (is (= '(fn* [] (foo bar baz)) (read-string "#(foo bar baz)"))))
 
 (defn inst [s]

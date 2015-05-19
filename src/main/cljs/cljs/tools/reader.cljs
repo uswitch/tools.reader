@@ -20,13 +20,13 @@
     [read-char reader-error unread peek-char indexing-reader?
      get-line-number get-column-number get-file-name string-push-back-reader]]
    [cljs.tools.reader.impl.utils :refer
-    [char ex-info? whitespace? numeric? desugar-meta]]
+    [char ex-info? whitespace? numeric? desugar-meta thread-bound?]]
    [cljs.tools.reader.impl.commons :refer
     [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
    [cljs.tools.reader.impl.core :refer
     [Exception IllegalArgumentException IllegalStateException
      RuntimeException
-     rt-next-id char-digit thread-bound?
+     rt-next-id char-digit
      prepend! mutable-list]]
    [goog.string :as gs])
   (:import
@@ -525,7 +525,7 @@
 (defn- read-fn
   [rdr _ opts pending-forms]
   (if (thread-bound? #'arg-env)
-    (throw (IllegalStateException. "Nested #()s are not allowed")))
+    (throw (ex-info "Nested #()s are not allowed" {:type :illegal-state})))
   (binding [arg-env (sorted-map)]
     (let [form (read* (doto rdr (unread \()) true nil opts pending-forms) ;; this sets bindings
           rargs (rseq arg-env)

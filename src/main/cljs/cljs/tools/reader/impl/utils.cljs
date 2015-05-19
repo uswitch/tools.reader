@@ -30,8 +30,10 @@
 (defn ex-info? [ex]
   (instance? cljs.core.ExceptionInfo ex))
 
-(defn starts-with? [s prefix]
-  (gstring/startsWith s prefix))
+(defn thread-bound?
+  "Checks that the vars are unbound, as we don't have threads"
+  [& vars]
+  (not-any? #(undefined? (deref %)) vars))
 
 #_(compile-if true ;pre-cljs-1243
 ;;; tagged-literal type arrived in CLJS-1243
