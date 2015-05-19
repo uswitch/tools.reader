@@ -2,7 +2,9 @@
   (:refer-clojure :exclude [read-string])
   (:require
     [cljs.test :as t :refer-macros [deftest is run-tests]]
-    [cljs.tools.reader :as reader :refer [*data-readers* read-string]]))
+    [cljs.tools.reader :as reader :refer
+     [*data-readers* read-string ->UnresolvedKeyword
+      ->UnresolvedSymbol ->SyntaxQuotedForm]]))
 
 ;;==============================================================================
 ;; common_tests.clj
@@ -152,8 +154,8 @@
 (deftest read-keyword
   (is (= :foo-bar (read-string ":foo-bar")))
   (is (= :foo/bar (read-string ":foo/bar")))
-  ;; (is (= '::foo-bar (namespace (read-string "::foo-bar"))))
-  ;; (is (= ^:resolve-ns :core/foo-bar (read-string "::core/foo-bar")))
+  (is (= (->UnresolvedKeyword nil "foo-bar") (read-string "::foo-bar")))
+  (is (= (->UnresolvedKeyword "core" "foo-bar") (read-string "::core/foo-bar")))
   (is (= :*+!-_? (read-string ":*+!-_?")))
   (is (= :abc:def:ghi (read-string ":abc:def:ghi")))
   (is (= :abc.def/ghi (read-string ":abc.def/ghi")))
@@ -168,12 +170,20 @@
 (deftest read-quote
   (is (= ''foo (read-string "'foo"))))
 
-#_(deftest read-syntax-quote ;;; can't do syntax quote yet - need namespace resolution
-  (is (= '`user/foo (read-string "`foo"))) ;;  (binding [*ns* (the-ns 'user)] (read-string "`foo"))
-  ;; (is (= () (eval (read-string "`(~@[])")))) ;;; no-eval
-  (is (= '`+ (read-string "`+")))
-  (is (= '`foo/bar (read-string "`foo/bar")))
-  (is (= '`1 (read-string "`1")))
+(deftest read-syntax-quote
+  (let [q (read-string "quote")]
+    (is (= q (first (read-string "`foo"))))
+    (is (= (->UnresolvedSymbol nil 'foo) (second (read-string "`foo"))))
+
+    ;; (is (= () (eval (read-string "`(~@[])")))) ;;; no-eval
+
+    (is (= q (first (read-string "`+"))))
+    (is (= (->UnresolvedSymbol nil '+) (second (read-string "`+"))))
+
+    (is (= q (first (read-string "`foo/bar"))))
+    (is (= (->UnresolvedSymbol 'foo 'bar) (second (read-string "`foo/bar"))))
+
+    (is (= 1 (read-string "`1"))))
   ;;;(is (= `(1 (~2 ~@'(3))) (eval (read-string "`(1 (~2 ~@'(3)))")))) ;;; no eval
   )
 

@@ -25,68 +25,6 @@
 
 (declare syntax-quote*)
 
-#_(defn- add-meta [form ret]
-  (if (and (instance? IWithMeta form)
-           (seq (dissoc (meta form) :line :column :end-line :end-column :file :source)))
-    (list 'clojure.core/with-meta ret (syntax-quote* (meta form)))
-    ret))
-
-#_(defmacro syntax-quote* [form]
-  (->>
-   (cond
-     (special-symbol? form) (list 'quote form)
-
-     (symbol? form)
-     (list 'quote
-           (if (namespace form)
-             (let [maybe-class ((ns-map *ns*)
-                                (symbol (namespace form)))]
-               (if (class? maybe-class)
-                 (symbol (.getName maybe-class) (name form))
-                 (resolve-symbol form)))
-             (let [sym (name form)]
-               (cond
-                 (.endsWith sym "#")
-                 (register-gensym form)
-
-                 (.startsWith sym ".")
-                 form
-
-                 (.endsWith sym ".")
-                 (let [csym (symbol (subs sym 0 (dec (count sym))))]
-                   (symbol (.concat (name (resolve-symbol csym)) ".")))
-                 :else (resolve-symbol form)))))
-
-     (unquote? form) (second form)
-     (unquote-splicing? form) (throw (IllegalStateException. "splice not in list"))
-
-     (coll? form)
-     (cond
-
-       (instance? IRecord form) form
-       (map? form) (syntax-quote-coll (map-func form) (flatten-map form))
-       (vector? form) (list 'clojure.core/vec (syntax-quote-coll nil form))
-       (set? form) (syntax-quote-coll 'clojure.core/hash-set form)
-       (or (seq? form) (list? form))
-       (let [seq (seq form)]
-         (if seq
-           (syntax-quote-coll nil seq)
-           '(clojure.core/list)))
-
-       :else (throw (UnsupportedOperationException. "Unknown Collection type")))
-
-     (or (keyword? form)
-         (number? form)
-         ;; (char? form) ;; no char type in cljs
-         (string? form)
-         (nil? form)
-         (bool? form)
-         (instance? js/RegExp form))
-     form
-
-     :else (list 'quote form))
-   (add-meta form)))
-
 (defmacro syntax-quote
   "Macro equivalent to the syntax-quote reader macro (`)."
   [form]

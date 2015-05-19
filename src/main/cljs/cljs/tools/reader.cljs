@@ -44,7 +44,9 @@
          ^:dynamic *suppress-read*
          default-data-readers)
 
-;;; ns-name* -> clj macro
+(defrecord UnresolvedKeyword [namespace name])
+(defrecord UnresolvedSymbol [namespace name])
+(defrecord SyntaxQuotedForm [form])
 
 (defn- macro-terminating? [ch]
   (case ch
@@ -359,8 +361,8 @@
                 name (s 1)]
             (if (identical? \: (nth token 0))
               (if ns
-                (keyword (str \: ns) name)
-                (keyword (str \: (subs name 1))))
+                (->UnresolvedKeyword (subs ns 1) name)
+                (->UnresolvedKeyword nil (subs name 1)))
               (keyword ns name)))
           (reader-error reader "Invalid token: :" token)))
       (reader-error reader "Invalid token: :"))))
@@ -380,11 +382,11 @@
       (when-not (map? m)
         (reader-error rdr "Metadata must be Symbol, Keyword, String or Map"))
       (let [o (read* rdr true nil opts pending-forms)]
-        (if (instance? IMeta o)
+        (if (satisfies? IMeta o)
           (let [m (if (and line (seq? o))
                     (assoc m :line line :column column)
                     m)]
-            (if (instance? IWithMeta o)
+            (if (satisfies? IWithMeta o)
               (with-meta o (merge (meta o) m))
               (reset-meta! o m)))
           (reader-error rdr "Metadata can only be applied to IMetas"))))))
@@ -640,31 +642,88 @@
         (set! gensym-env (assoc gensym-env sym gs))
         gs)))
 
-;;; resolve-symbol -> clj macro as ns fns only available there
+(defn- add-meta [form ret]
+  (if (and (satisfies? IWithMeta form)
+           (seq (dissoc (meta form) :line :column :end-line :end-column :file :source)))
+    (list 'cljs.core/with-meta ret (syntax-quote* (meta form)))
+    ret))
 
 (defn- syntax-quote-coll [type coll]
   ;; We use sequence rather than seq here to fix http://dev.clojure.org/jira/browse/CLJ-1444
   ;; But because of http://dev.clojure.org/jira/browse/CLJ-1586 we still need to call seq on the form
-  (let [res (list 'clojure.core/sequence
-                  (list 'clojure.core/seq
-                        (cons 'clojure.core/concat
-                              (expand-list coll))))]
+  (let [res (->SyntaxQuotedForm
+             (list 'cljs.core/sequence
+                   (list 'cljs.core/seq
+                         (cons 'cljs.core/concat
+                               (expand-list coll)))))]
     (if type
-      (list 'clojure.core/apply type res)
+      (list 'cljs.core/apply type res)
       res)))
 
 (defn map-func
   "Decide which map type to use, array-map if less than 16 elements"
   [coll]
   (if (>= (count coll) 16)
-    'clojure.core/hash-map
-    'clojure.core/array-map))
-
+    'cljs.core/hash-map
+    'cljs.core/array-map))
 
 (defn bool? [x]
   (or (instance? js/Boolean x)
       (true? x)
       (false? x)))
+
+(defn- syntax-quote* [form]
+  (->>
+   (cond
+    (special-symbol? form) (list 'quote form)
+
+    (symbol? form)
+    (list 'quote
+          (if (namespace form)
+            (->UnresolvedSymbol (symbol (namespace form)) (symbol (name form)))
+            (let [sym (name form)]
+              (cond
+               (gs/endsWith sym "#")
+               (register-gensym form)
+
+               (gs/startsWith sym ".")
+               form
+
+               (gs/endsWith sym ".")
+               (->UnresolvedSymbol nil sym)
+
+               :else (->UnresolvedSymbol nil form)))))
+
+    (unquote? form) (second form)
+    (unquote-splicing? form) (throw (IllegalStateException. "splice not in list"))
+
+    (coll? form)
+    (cond
+
+     (satisfies? IRecord form) form
+     (map? form) (syntax-quote-coll (map-func form) (flatten-map form))
+     (vector? form) (list 'cljs.core/vec (syntax-quote-coll nil form))
+     (set? form) (syntax-quote-coll 'cljs.core/hash-set form)
+     (or (seq? form) (list? form))
+     (let [seq (seq form)]
+       (if seq
+         (syntax-quote-coll nil seq)
+         '(cljs.core/list)))
+
+     :else (throw (ex-info "Unknown Collection type"
+                           {:type :unsupported-operation})))
+
+    (or (keyword? form)
+        (number? form)
+        ;; (char? form) ;;; no char type in cljs
+        (string? form)
+        (nil? form)
+        (bool? form)
+        (instance? js/RegExp form))
+    form
+
+    :else (list 'quote form))
+   (add-meta form)))
 
 (defn- read-syntax-quote
   [rdr backquote opts pending-forms]
