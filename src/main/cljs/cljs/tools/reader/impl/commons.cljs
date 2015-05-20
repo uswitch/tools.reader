@@ -89,13 +89,10 @@
 (defn match-number [s]
   (if (matches? int-pattern s)
     (match-int s)
-    (do
-      (when (goog.string/startsWith s "0.314")
-        (prn s (re-find float-pattern s)))
-      (if (matches? float-pattern s)
-       (match-float s)
-       (when (matches? ratio-pattern s)
-         (match-ratio s))))))
+    (if (matches? float-pattern s)
+      (match-float s)
+      (when (matches? ratio-pattern s)
+        (match-ratio s)))))
 
 (defn parse-symbol
   "Parses a string into a vector of the namespace and symbol"

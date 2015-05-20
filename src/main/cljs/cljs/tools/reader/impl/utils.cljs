@@ -87,6 +87,7 @@
   (when ch
     (let [white-chars
           [\,
+           \space
            "\t"         ;;, U+0009 HORIZONTAL TABULATION.
            "\n"         ;;, U+000A LINE FEED.
            "\u000B"     ;;, U+000B VERTICAL TABULATION.

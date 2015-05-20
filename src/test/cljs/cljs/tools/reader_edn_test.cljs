@@ -6,9 +6,7 @@
 (defn inst [s] (js/Date. s))
 (defn uuid [s] (cljs.core.UUID. s nil))
 
-(def data-readers
-  {'inst inst
-   'uuid uuid})
+(def data-readers {'inst inst 'uuid uuid})
 
 (deftest read-keyword
   (is (= :foo-bar (edn/read-string ":foo-bar")))
