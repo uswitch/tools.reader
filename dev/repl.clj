@@ -7,7 +7,7 @@
 
 ;; (cljs.closure/build "dev" {:main 'cljs.tools.reader :output-to "out/main.js" :verbose true})
 
-(cemerick.piggieback/cljs-repl :repl-env (cljs.repl.node/repl-env)
+(cemerick.piggieback/cljs-repl (cljs.repl.node/repl-env)
                                :watch "src/main/cljs"
                                :output-dir "out")
 
@@ -16,4 +16,4 @@
 ;;                 ;; :output-dir "out"
 ;;                 )
 
-(cljs.core/enable-console-print!)
+;; (cljs.core/enable-console-print!)

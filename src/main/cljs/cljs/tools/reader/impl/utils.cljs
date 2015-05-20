@@ -85,8 +85,18 @@
   "Checks whether a given character is whitespace"
   [ch]
   (when ch
-    (or (gstring/isSpace ch)
-        (identical? \,  ch))))
+    (let [white-chars
+          [\,
+           "\t"         ;;, U+0009 HORIZONTAL TABULATION.
+           "\n"         ;;, U+000A LINE FEED.
+           "\u000B"     ;;, U+000B VERTICAL TABULATION.
+           "\f"         ;;, U+000C FORM FEED.
+           "\r"         ;;, U+000D CARRIAGE RETURN.
+           "\u001C"     ;;, U+001C FILE SEPARATOR.
+           "\u001D"     ;;, U+001D GROUP SEPARATOR.
+           "\u001E"     ;;, U+001E RECORD SEPARATOR.
+           "\u001F"]]  ;;, U+001F UNIT SEPARATOR
+      (some (partial identical? ch) white-chars))))
 
 (defn numeric?
   "Checks whether a given character is numeric"
@@ -98,6 +108,7 @@
   "Checks whether the character is a newline"
   [c]
   (or (identical? \newline c)
+      (identical? "\n" c)
       (nil? c)))
 
 (defn desugar-meta

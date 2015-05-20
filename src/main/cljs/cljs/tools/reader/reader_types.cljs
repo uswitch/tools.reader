@@ -261,6 +261,7 @@ logging frames. Called when pushing a character back."
   "Throws an ExceptionInfo with the given message.
    If rdr is an IndexingReader, additional information about column and line number is provided"
   [rdr & msg]
+  (.log js/console 0.314e+1 msg (indexing-reader? rdr) rdr)
   (throw (ex-info (apply str msg)
                   (merge {:type :reader-exception}
                          (when (indexing-reader? rdr)

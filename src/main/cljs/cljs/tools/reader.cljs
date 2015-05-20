@@ -883,7 +883,7 @@
                                (recur)
                                res))
                            (read-symbol reader ch))))))))
-       (catch Exception e
+       (catch js/Error e
          (.log js/console (.-stack e))
          (if (ex-info? e)
            (let [d (ex-data e)]

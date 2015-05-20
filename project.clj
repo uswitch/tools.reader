@@ -4,7 +4,7 @@
   :url "https://github.com/clojure/tools.reader"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :source-paths ["src/main/clojure" "src/main/clojurescript"]
+  :source-paths ["src/main/clojure" "src/main/cljs"]
   :test-paths ["src/test/clojure"]
   :repositories {"sonatype-oss-public" "https://oss.sonatype.org/content/groups/public/"}
   :dependencies [[org.clojure/clojure "1.7.0-master-SNAPSHOT"]
@@ -14,10 +14,8 @@
              :1.5 {:dependencies [[org.clojure/clojure "1.5.1"]]}
              :1.6 {:dependencies [[org.clojure/clojure "1.6.0"]]}
              :1.7 {:dependencies [[org.clojure/clojure "1.7.0-master-SNAPSHOT"]]}
-             :dev {:dependencies [[com.cemerick/piggieback "0.2.1"]]
-                   :plugins [ ;[com.cemerick/austin "0.1.6"]
-                             [com.cemerick/piggieback "0.2.1"]
-                             [org.clojure/tools.nrepl "0.2.10"]]
+             :dev {:dependencies [[com.cemerick/piggieback "0.2.1"]
+                                  [org.clojure/tools.nrepl "0.2.10"]]
                    :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}}
   :aliases {"test-all" ["with-profile" "test,1.4:test,1.5:test,1.6:test,1.7" "test"]
             "check-all" ["with-profile" "1.4:1.5:1.6:1.7" "check"]}
