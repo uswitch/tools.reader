@@ -70,8 +70,10 @@
     (compare-forms-with-meta expected-haiku-defn second-form)))
 
 (def expected-haiku-ns-with-source
-  (with-meta  '((with-meta 'ns {:line 1 :column 2 :end-line 1 :end-column 4 :source "ns" :file "haiku.clj"})
-                (with-meta ' clojure.tools.reader.haiku {:line 1 :column 5 :end-line 1 :end-column 31 :source "clojure.tools.reader.haiku" :file "haiku.clj"}))
+  (with-meta
+    (list
+     (with-meta 'ns {:line 1 :column 2 :end-line 1 :end-column 4 :source "ns" :file "haiku.clj"})
+     (with-meta ' clojure.tools.reader.haiku {:line 1 :column 5 :end-line 1 :end-column 31 :source "clojure.tools.reader.haiku" :file "haiku.clj"}))
     {:line 1 :column 1 :end-line 1 :end-column 32 :source "(ns clojure.tools.reader.haiku)" :file "haiku.clj"}))
 
 (def expected-haiku-defn-with-source
@@ -119,7 +121,7 @@
             ["[ +42 -42 0N +042 +0x42e -0x42e -36rCRAZY -42.2e-3M 0.314e+1"
              "  true false :kw :ns/kw 'foo/bar nil"
              "  \\f \\u0194 \\newline \\o377 \\ud7ff "
-             " () [7] #{8 9} '^{:meta []} bar  "
+             " () [7] #{9 8} '^{:meta []} bar  "
              ;;" () [7] #{8 9}                   "
              "  #inst \"2010-11-12T13:14:15.666\""
              " ]"]))

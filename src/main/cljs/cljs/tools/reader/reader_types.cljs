@@ -136,8 +136,8 @@ metadata merged over `m`."
   "Returns a string containing the contents of the top most source
 logging frame."
   [source-log-frames]
-  (let [current-frame @source-log-frames]
-    (subs (:buffer current-frame) (:offset current-frame))))
+  (let [current-frame source-log-frames]
+    (subs (str (:buffer current-frame)) (:offset current-frame))))
 
 (defn- log-source-char
   "Logs `char` to all currently active source logging frames."
@@ -196,7 +196,7 @@ logging frames. Called when pushing a character back."
         new-frame (assoc-in @frame [:offset] (.getLength buffer))]
     (let [frame new-frame]
       (let [ret (f)]
-        (if (satisfies? cljs.core.IMeta ret)
+        (if (satisfies? IMeta ret)
           (merge-meta ret {:source (peek-source-log frame)})
           ret)))))
 
