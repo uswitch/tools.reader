@@ -12,7 +12,7 @@
   (:refer-clojure :exclude [char read-line])
   (:require-macros
    [cljs.tools.reader.impl.utils :refer [compile-if]]
-   [cljs.tools.reader.reader-types :refer [update!]])
+   )
   (:require
    [cljs.tools.reader.impl.utils :refer [char whitespace? newline?]])
   (:import
@@ -50,7 +50,7 @@
   (read-char [reader]
     (when (> s-len s-pos)
       (let [r (nth s s-pos)]
-        (update! s-pos inc)
+        (set! s-pos (inc s-pos))
         r)))
   (peek-char [reader]
     (when (> s-len s-pos)
@@ -63,7 +63,7 @@
     (char
      (if (< buf-pos buf-len)
        (let [r (aget buf buf-pos)]
-         (update! buf-pos inc)
+         (set! buf-pos (inc buf-pos))
          r)
        (read-char rdr))))
   (peek-char [reader]
@@ -75,7 +75,7 @@
   (unread [reader ch]
     (when ch
       (if (zero? buf-pos) (throw (js/Error. "Pushback buffer is full")))
-      (update! buf-pos dec)
+      (set! buf-pos (dec buf-pos))
       (aset buf buf-pos ch))))
 
 (defn- normalize-newline [rdr ch]
@@ -100,8 +100,8 @@
         (when line-start?
           (set! prev-column column)
           (set! column 0)
-          (update! line inc))
-        (update! column inc)
+          (set! line (inc line)))
+        (set! column (inc column))
         ch)))
 
   (peek-char [reader]
@@ -110,9 +110,9 @@
   IPushbackReader
   (unread [reader ch]
     (if line-start?
-      (do (update! line dec)
+      (do (set! line (dec line))
           (set! column prev-column))
-      (update! column dec))
+      (set! column (dec column)))
     (set! line-start? prev)
     (unread rdr ch))
 
@@ -164,8 +164,8 @@ logging frames. Called when pushing a character back."
         (when line-start?
           (set! prev-column column)
           (set! column 0)
-          (update! line inc))
-        (update! column inc)
+          (set! line (inc line)))
+        (set! column (inc column))
         (log-source-char source-log-frames ch)
         ch)))
 
@@ -175,9 +175,9 @@ logging frames. Called when pushing a character back."
   IPushbackReader
   (unread [reader ch]
     (if line-start?
-      (do (update! line dec)
+      (do (set! line (dec line))
           (set! column prev-column))
-      (update! column dec))
+      (set! column (dec column)))
     (set! line-start? prev)
     (when ch
       (drop-last-logged-char source-log-frames))
@@ -260,7 +260,6 @@ logging frames. Called when pushing a character back."
   "Throws an ExceptionInfo with the given message.
    If rdr is an IndexingReader, additional information about column and line number is provided"
   [rdr & msg]
-  (.log js/console 0.314e+1 msg (indexing-reader? rdr) rdr)
   (throw (ex-info (apply str msg)
                   (merge {:type :reader-exception}
                          (when (indexing-reader? rdr)

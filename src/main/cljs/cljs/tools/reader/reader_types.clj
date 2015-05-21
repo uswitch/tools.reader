@@ -18,6 +18,3 @@
             (not (cljs.tools.reader.impl.utils/whitespace? (peek-char ~reader))))
      (log-source* ~reader (^:once fn* [] ~@body))
      (do ~@body)))
-
-(defmacro update! [what f]
-  (list 'set! what (list f what)))
