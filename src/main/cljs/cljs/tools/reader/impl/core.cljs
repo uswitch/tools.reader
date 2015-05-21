@@ -1,4 +1,5 @@
-(ns cljs.tools.reader.impl.core)
+(ns cljs.tools.reader.impl.core
+  (:require [goog.array]))
 
 (def last-id (atom 0))
 (defn rt-next-id
@@ -7,22 +8,14 @@
   (swap! last-id inc))
 
 (defprotocol IMutableList
-  (concat! [this x])
   (prepend! [this x]))
 
 (deftype MutableList [state]
   IMutableList
-  (concat! [_ x]
-    (swap! state concat x))
   (prepend! [_ x]
-    (swap! state (partial concat x)))
-  ISeq
-  (-first [_]
-    (first @state))
-  (-rest [_]
-    (rest @state))
+    (goog.array/extend x state))
   ISeqable
-  (-seq [_] @state))
+  (-seq [_] (seq state)))
 
 (defn mutable-list [& args]
-  (MutableList. (atom args)))
+  (MutableList. (to-array args)))
