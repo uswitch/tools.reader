@@ -1,3 +1,42 @@
+# Status of ClojureScript tools.reader 21st of May, 2015
+
+## Additions
+
+- indexing/sourcelogging "working"
+- metadata reading
+- most tests passing
+- extended number parsing to support exponents: 0.314e+1 - reduced to
+  js/Number
+
+## Not working
+
+- Records can't be instantiated without eval, should use a wrapping
+  datastructure such as:
+  `(defrecord RecordConstructor [namespace name values])`
+
+## Questions - answered
+
+- Should we implement `inst` and `uuid` or is that a ClojureScript
+  compiler concern?
+  => I think this is out of scope. `inst` and `uuid` are cljs.core fns,
+     the *data-readers* mapping can be passed by the user, or the
+     compiler.
+- How is ClojureScript going to pass in namespace resolution? How does
+  tools.reader augment the namespace resolution? Who's responsibility is
+  maintaining environment e.g. for `syntax-quote`?
+  => swannodette: @bostonou @andrewmcveigh @tgkristensen as @bronsa_
+     alluded, discard anything incompatible w/ CLJS compilation/runtime
+     model
+     https://twitter.com/swannodette/status/600358954196144128
+  => passing wrapping datastructures to the compiler seems reasonable
+     swannodette: @bostonou @andrewmcveigh @bronsa_ @tgkristensen it's
+     useful in that you can pass read forms on to the compiler :)
+     https://twitter.com/swannodette/status/600356869467742210
+- Are we going to get an `eval` in ClojureScript? tools.reader
+  implements `#=(...)` which requires `eval`, so we don't know if we
+  should drop that support?
+  => as above
+
 # Status of ClojureScript tools.reader 18th of May, 2015
 
 Progress has been made on porting tools.reader to ClojureScript. The
