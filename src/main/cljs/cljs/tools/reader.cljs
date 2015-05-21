@@ -13,7 +13,6 @@
                             default-data-readers *default-data-reader-fn*
                             *read-eval* *data-readers* *suppress-read*])
   (:require-macros
-   ;; [cljs.tools.reader :refer [syntax-quote syntax-quote*]]
    [cljs.tools.reader.reader-types :refer [log-source]])
   (:require
    [cljs.tools.reader.reader-types :refer
