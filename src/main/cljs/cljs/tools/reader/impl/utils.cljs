@@ -15,18 +15,6 @@
   (when x
     (cljs.core/char x)))
 
-;; getColumnNumber and *default-data-reader-fn* are available only since clojure-1.5.0-beta1
-
-(defn cljs-version []
-  (let [[major minor] (string/split *clojurescript-version* #"\.")
-        [minor build] (string/split minor #"-")
-        [major minor build] (map #(js/parseInt %) [major minor build])]
-    {:major major
-     :minor minor
-     :build build}))
-
-(def pre-cljs-1243 (-> (cljs-version) :build (< 1243)))
-
 (defn ex-info? [ex]
   (instance? cljs.core.ExceptionInfo ex))
 
@@ -35,51 +23,31 @@
   [& vars]
   (not-any? #(undefined? (deref %)) vars))
 
-#_(compile-if true ;pre-cljs-1243
-;;; tagged-literal type arrived in CLJS-1243
+(defrecord ReaderConditional [splicing? form])
+;; (ns-unmap *ns* '->ReaderConditional)
+;; (ns-unmap *ns* 'map->ReaderConditional)
 
-  (do
-    (defrecord TaggedLiteral [tag form])
+(defn reader-conditional?
+  "Return true if the value is the data representation of a reader conditional"
+  [value]
+  (instance? ReaderConditional value))
 
-    (defn tagged-literal?
-      "Return true if the value is the data representation of a tagged literal"
-      [value]
-      (instance? clojure.tools.reader.impl.utils.TaggedLiteral value))
+(defn reader-conditional
+  "Construct a data representation of a reader conditional.
+  If true, splicing? indicates read-cond-splicing."
+  [form splicing?]
+  (ReaderConditional. splicing? form))
 
-    (defn tagged-literal
-      "Construct a data representation of a tagged literal from a
-       tag symbol and a form."
-      [tag form]
-      (clojure.tools.reader.impl.utils.TaggedLiteral. tag form))
-
-    ;; (ns-unmap *ns* '->TaggedLiteral)
-    ;; (ns-unmap *ns* 'map->TaggedLiteral)
-
-    (defmethod print-method clojure.tools.reader.impl.utils.TaggedLiteral [o w]
-      (.write w "#")
-      (print-method (:tag o) w)
-      (.write w " ")
-      (print-method (:form o) w))
-
-    (defrecord ReaderConditional [splicing? form])
-    ;; (ns-unmap *ns* '->ReaderConditional)
-    ;; (ns-unmap *ns* 'map->ReaderConditional)
-
-    (defn reader-conditional?
-      "Return true if the value is the data representation of a reader conditional"
-      [value]
-      (instance? clojure.tools.reader.impl.utils.ReaderConditional value))
-
-    (defn reader-conditional
-      "Construct a data representation of a reader conditional.
-       If true, splicing? indicates read-cond-splicing."
-      [form splicing?]
-      (clojure.tools.reader.impl.utils.ReaderConditional. splicing? form))
-
-    (defmethod print-method clojure.tools.reader.impl.utils.ReaderConditional [o w]
-      (.write w "#?")
-      (when (:splicing? o) (.write w "@"))
-      (print-method (:form o) w))))
+(extend-protocol IPrintWithWriter
+  ReaderConditional
+  (-pr-writer [coll writer opts]
+    (pr-sequential-writer writer
+                          pr-writer ; this is private in cljs.core?
+                          (str "#?" (when (:splicing? coll) "@") "(")
+                          " "
+                          ")"
+                          opts
+                          coll)))
 
 (defn whitespace?
   "Checks whether a given character is whitespace"
@@ -124,6 +92,5 @@
 (def last-id (atom 0))
 
 (defn next-id
-  ^:stub
   []
   (swap! last-id inc))

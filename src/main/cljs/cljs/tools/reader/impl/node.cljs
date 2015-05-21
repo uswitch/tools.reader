@@ -6,8 +6,6 @@
     [IndexingReader IPushbackReader Reader get-column-number
      get-file-name get-line-number read-char peek-char unread]]))
 
-(enable-console-print!)
-
 (deftype NodePushbackReader [readable]
   Reader
   (read-char [_]
