@@ -20,10 +20,10 @@
     [read-char reader-error unread peek-char indexing-reader?
      get-line-number get-column-number get-file-name string-push-back-reader]]
    [cljs.tools.reader.impl.utils :refer
-    [char ex-info? whitespace? numeric? desugar-meta thread-bound?]]
+    [char ex-info? whitespace? numeric? desugar-meta next-id thread-bound?]]
    [cljs.tools.reader.impl.commons :refer
     [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
-   [cljs.tools.reader.impl.core :refer [rt-next-id prepend! mutable-list]]
+   [goog.array :as ga]
    [goog.string :as gs])
   (:import
    [goog.string StringBuffer]))
@@ -493,7 +493,7 @@
       (if splicing
         (if (instance? List result)
           (do
-            (prepend! pending-forms result)
+            (ga/extend result pending-forms)
             rdr)
           (reader-error rdr "Spliced form list in read-cond-splicing must implement java.util.List."))
         result))))
@@ -522,7 +522,7 @@
   "Get a symbol for an anonymous ?argument?"
   [n]
   (symbol (str (if (== -1 n) "rest" (str "p" n))
-               "__" (rt-next-id) "#")))
+               "__" (next-id) "#")))
 
 (defn- read-fn
   [rdr _ opts pending-forms]
@@ -641,7 +641,7 @@
   (or (get gensym-env sym)
       (let [gs (symbol (str (subs (name sym)
                                   0 (dec (count (name sym))))
-                            "__" (rt-next-id) "__auto__"))]
+                            "__" (next-id) "__auto__"))]
         (set! gensym-env (assoc gensym-env sym gs))
         gs)))
 
@@ -932,8 +932,8 @@
   {:arglists '([] [reader] [opts reader] [reader eof-error? eof-value])}
   ;; ([] (read *in* true nil))
   ([reader] (read reader true nil))
-  ([{eof :eof :as opts :or {eof :eofthrow}} reader] (read* reader (= eof :eofthrow) eof nil opts (mutable-list)))
-  ([reader eof-error? sentinel] (read* reader eof-error? sentinel nil {} (mutable-list))))
+  ([{eof :eof :as opts :or {eof :eofthrow}} reader] (read* reader (= eof :eofthrow) eof nil opts (to-array [])))
+  ([reader eof-error? sentinel] (read* reader eof-error? sentinel nil {} (to-array []))))
 
 (defn read-string
   "Reads one object from the string s.

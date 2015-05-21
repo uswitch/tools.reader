@@ -120,3 +120,10 @@
     (symbol? f)  {:tag f}
     (string? f)  {:tag f}
     :else        f))
+
+(def last-id (atom 0))
+
+(defn next-id
+  ^:stub
+  []
+  (swap! last-id inc))
