@@ -23,11 +23,7 @@
     [char ex-info? whitespace? numeric? desugar-meta thread-bound?]]
    [cljs.tools.reader.impl.commons :refer
     [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
-   [cljs.tools.reader.impl.core :refer
-    [Exception IllegalArgumentException IllegalStateException
-     RuntimeException
-     rt-next-id char-digit
-     prepend! mutable-list]]
+   [cljs.tools.reader.impl.core :refer [rt-next-id prepend! mutable-list]]
    [goog.string :as gs])
   (:import
    [goog.string StringBuffer]))
@@ -112,32 +108,36 @@
   ([token offset length base]
      (let [l (+ offset length)]
        (when-not (== (count token) l)
-         (throw (IllegalArgumentException. (str "Invalid unicode character: \\" token))))
+         (throw (ex-info. (str "Invalid unicode character: \\" token)
+                          {:type :illegal-argument})))
        (loop [i offset uc 0]
          (if (== i l)
            (js/String.fromCharCode uc)
            (let [d (char-code (nth token i) base)]
              (if (== d -1)
-               (throw (IllegalArgumentException. (str "Invalid digit: " (nth token i))))
+               (throw (ex-info. (str "Invalid digit: " (nth token i))
+                                {:type :illegal-argument}))
                (recur (inc i) (+ d (* uc base)))))))))
 
   ([rdr initch base length exact?]
      (loop [i 1 uc (char-code initch base)]
        (if (== uc -1)
-         (throw (IllegalArgumentException. (str "Invalid digit: " initch)))
+         (throw (ex-info. (str "Invalid digit: " initch)
+                          {:type :illegal-argument}))
          (if-not (== i length)
            (let [ch (peek-char rdr)]
              (if (or (whitespace? ch)
                      (macros ch)
                      (nil? ch))
                (if exact?
-                 (throw (IllegalArgumentException.
-                         (str "Invalid character length: " i ", should be: " length)))
+                 (throw (ex-info. (str "Invalid character length: " i ", should be: " length)
+                                  {:type :illegal-argument}))
                  (js/String.fromCharCode uc))
                (let [d (char-code ch base)]
                  (read-char rdr)
                  (if (== d -1)
-                   (throw (IllegalArgumentException. (str "Invalid digit: " ch)))
+                   (throw (ex-info. (str "Invalid digit: " ch)
+                                    {:type :illegal-argument}))
                    (recur (inc i) (+ d (* uc base)))))))
            (js/String.fromCharCode uc))))))
 
@@ -294,7 +294,7 @@
       \b "\b"
       \f "\f"
       \u (let [ch (read-char rdr)]
-           (if (== -1 (char-digit (int ch) 16))
+           (if (== -1 (js/parseInt (int ch) 16))
              (reader-error rdr "Invalid unicode escape: \\u" ch)
              (read-unicode-char rdr ch 16 4 true)))
       (if (numeric? ch)
@@ -554,7 +554,8 @@
       (let [g (garg n)]
         (set! arg-env (assoc arg-env n g))
         g))
-    (throw (IllegalStateException. "Arg literal not in #()")))) ;; should never hit this
+    (throw (ex-info "Arg literal not in #()"
+                    {:type :illegal-state})))) ;; should never hit this
 
 (declare read-symbol)
 
@@ -576,7 +577,8 @@
        :else
        (let [n (read* rdr true nil opts pending-forms)]
          (if-not (integer? n)
-           (throw (IllegalStateException. "Arg literal must be %, %& or %integer"))
+           (throw (ex-info "Arg literal must be %, %& or %integer"
+                           {:type :illegal-state}))
            (register-arg n)))))))
 
 (defn- read-eval
@@ -634,7 +636,8 @@
 
 (defn- register-gensym [sym]
   (if-not gensym-env
-    (throw (IllegalStateException. "Gensym literal not in syntax-quote")))
+    (throw (ex-info "Gensym literal not in syntax-quote"
+                    {:type :illegal-state})))
   (or (get gensym-env sym)
       (let [gs (symbol (str (subs (name sym)
                                   0 (dec (count (name sym))))
@@ -695,7 +698,8 @@
                :else (->UnresolvedSymbol nil form)))))
 
     (unquote? form) (second form)
-    (unquote-splicing? form) (throw (IllegalStateException. "splice not in list"))
+    (unquote-splicing? form) (throw (ex-info "splice not in list"
+                                             {:type :illegal-state}))
 
     (coll? form)
     (cond

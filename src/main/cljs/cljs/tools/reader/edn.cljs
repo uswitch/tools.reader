@@ -18,20 +18,9 @@
     [char ex-info? whitespace? numeric? desugar-meta]]
    [cljs.tools.reader.impl.commons :refer
     [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
-   [cljs.tools.reader :refer [default-data-readers]]
-   [cljs.tools.reader.impl.core :refer
-    [Exception
-     IllegalArgumentException
-     persistent-hash-set-create-with-check
-     rt-map
-     integer-to-string
-     string-builder
-     persistent-list-create
-     char-digit
-     char-value-of
-     append
-     ]]
-   [goog.string :as gs]))
+   [cljs.tools.reader :refer [default-data-readers map-func]]
+   [goog.string :as gs])
+  (:import [goog.string StringBuffer]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; helpers
@@ -63,7 +52,7 @@
       (reader-error rdr "Invalid leading character: " initch)
 
       :else
-      (loop [sb (string-builder)
+      (loop [sb (StringBuffer.)
              ch (do (unread rdr initch) initch)]
         (if (or (whitespace? ch)
                 (macro-terminating? ch)
@@ -71,7 +60,7 @@
           (str sb)
           (if (not-constituent? ch)
             (reader-error rdr "Invalid constituent character: " ch)
-            (recur (doto sb (append (read-char rdr))) (peek-char rdr))))))))
+            (recur (doto sb (.append (read-char rdr))) (peek-char rdr))))))))
 
 (declare read-tagged)
 
@@ -97,32 +86,36 @@
   ([token offset length base]
      (let [l (+ offset length)]
        (when-not (== (count token) l)
-         (throw (IllegalArgumentException (str "Invalid unicode character: \\" token))))
+         (throw (ex-info (str "Invalid unicode character: \\" token)
+                         {:type :illegal-argument})))
        (loop [i offset uc 0]
          (if (== i l)
            (char uc)
-           (let [d (char-digit (int (nth token i)) (int base))]
+           (let [d (js/parseInt (int (nth token i)) (int base))]
              (if (== d -1)
-               (throw (IllegalArgumentException (str "Invalid digit: " (nth token i))))
+               (throw (ex-info (str "Invalid digit: " (nth token i))
+                               {:type :illegal-argument}))
                (recur (inc i) (long (+ d (* uc base))))))))))
 
   ([rdr initch base length exact?]
-     (loop [i 1 uc (char-digit (int initch) (int base))]
+     (loop [i 1 uc (js/parseInt (int initch) (int base))]
        (if (== uc -1)
-         (throw (IllegalArgumentException (str "Invalid digit: " initch)))
+         (throw (ex-info (str "Invalid digit: " initch)
+                         {:type :illegal-argument}))
          (if-not (== i length)
            (let [ch (peek-char rdr)]
              (if (or (whitespace? ch)
                      (macros ch)
                      (nil? ch))
                (if exact?
-                 (throw (IllegalArgumentException
-                         (str "Invalid character length: " i ", should be: " length)))
+                 (throw (ex-info (str "Invalid character length: " i ", should be: " length)
+                                 {:type :illegal-argument}))
                  (char uc))
-               (let [d (char-digit (int ch) (int base))]
+               (let [d (js/parseInt (int ch) (int base))]
                  (read-char rdr)
                  (if (== d -1)
-                   (throw (IllegalArgumentException (str "Invalid digit: " ch)))
+                   (throw (ex-info (str "Invalid digit: " ch)
+                                   {:type :illegal-argument}))
                    (recur (inc i) (long (+ d (* uc base))))))))
            (char uc))))))
 
@@ -141,7 +134,7 @@
             token-len (count token)]
         (cond
 
-         (== 1 token-len)  (char-value-of (nth token 0))
+         (== 1 token-len)  (nth token 0)
 
          (= token "newline") \newline
          (= token "space") \space
@@ -155,7 +148,7 @@
                ic (int c)]
            (if (and (> ic upper-limit)
                     (< ic lower-limit))
-             (reader-error rdr "Invalid character constant: \\u" (integer-to-string ic 16))
+             (reader-error rdr "Invalid character constant: \\u" (.toString ic 16))
              c))
 
          (gs/startsWith token "o")
@@ -194,7 +187,7 @@
   (let [the-list (read-delimited \) rdr opts)]
     (if (empty? the-list)
       '()
-      (persistent-list-create the-list))))
+      (apply list the-list))))
 
 (defn- read-vector
   [rdr _ opts]
@@ -205,18 +198,18 @@
   (let [l (to-array (read-delimited \} rdr opts))]
     (when (== 1 (bit-and (alength l) 1))
       (reader-error rdr "Map literal must contain an even number of forms"))
-    (rt-map l)))
+    (apply map-func l)))
 
 (defn- read-number
   [reader initch opts]
-  (loop [sb (doto (string-builder) (append initch))
+  (loop [sb (doto (StringBuffer.) (.append initch))
          ch (read-char reader)]
     (if (or (whitespace? ch) (macros ch) (nil? ch))
       (let [s (str sb)]
         (unread reader ch)
         (or (match-number s)
             (reader-error reader "Invalid number format [" s "]")))
-      (recur (doto sb (append ch)) (read-char reader)))))
+      (recur (doto sb (.append ch)) (read-char reader)))))
 
 (defn- escape-char [sb rdr]
   (let [ch (read-char rdr)]
@@ -229,7 +222,7 @@
       \b "\b"
       \f "\f"
       \u (let [ch (read-char rdr)]
-           (if (== -1 (char-digit (int ch) 16))
+           (if (== -1 (js/parseInt (int ch) 16))
              (reader-error rdr "Invalid unicode escape: \\u" ch)
              (read-unicode-char rdr ch 16 4 true)))
       (if (numeric? ch)
@@ -241,14 +234,14 @@
 
 (defn- read-string*
   [reader _ opts]
-  (loop [sb (string-builder)
+  (loop [sb (StringBuffer.)
          ch (read-char reader)]
     (case ch
       nil (reader-error reader "EOF while reading string")
-      \\ (recur (doto sb (append (escape-char sb reader)))
+      \\ (recur (doto sb (.append (escape-char sb reader)))
                 (read-char reader))
       \" (str sb)
-      (recur (doto sb (append ch)) (read-char reader)))))
+      (recur (doto sb (.append ch)) (read-char reader)))))
 
 (defn- read-symbol
   [rdr initch]
@@ -300,7 +293,7 @@
 
 (defn- read-set
   [rdr _ opts]
-  (persistent-hash-set-create-with-check (read-delimited \} rdr opts)))
+  (set (read-delimited \} rdr opts)))
 
 (defn- read-discard
   [rdr _ opts]
@@ -385,7 +378,7 @@
                           (recur)
                           res))
                       (read-symbol reader ch))))))
-       (catch Exception e
+       (catch js/Error e
          (if (ex-info? e)
            (let [d (ex-data e)]
              (if (= :reader-exception (:type d))

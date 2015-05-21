@@ -14,8 +14,7 @@
    [cljs.tools.reader.impl.utils :refer [compile-if]]
    [cljs.tools.reader.reader-types :refer [update!]])
   (:require
-   [cljs.tools.reader.impl.utils :refer [char whitespace? newline?]]
-   [cljs.tools.reader.impl.core :refer [RuntimeException]])
+   [cljs.tools.reader.impl.utils :refer [char whitespace? newline?]])
   (:import
    [goog.string StringBuffer]))
 
@@ -75,7 +74,7 @@
   IPushbackReader
   (unread [reader ch]
     (when ch
-      (if (zero? buf-pos) (throw (RuntimeException. "Pushback buffer is full")))
+      (if (zero? buf-pos) (throw (js/Error. "Pushback buffer is full")))
       (update! buf-pos dec)
       (aset buf buf-pos ch))))
 
