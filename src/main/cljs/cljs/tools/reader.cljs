@@ -12,12 +12,11 @@
   (:refer-clojure :exclude [read read-line read-string char
                             default-data-readers *default-data-reader-fn*
                             *read-eval* *data-readers* *suppress-read*])
-  (:require-macros
-   [cljs.tools.reader.reader-types :refer [log-source]])
   (:require
    [cljs.tools.reader.reader-types :refer
     [read-char reader-error unread peek-char indexing-reader?
-     get-line-number get-column-number get-file-name string-push-back-reader]]
+     get-line-number get-column-number get-file-name
+     string-push-back-reader log-source]]
    [cljs.tools.reader.impl.utils :refer
     [char ex-info? whitespace? numeric? desugar-meta next-id thread-bound?]]
    [cljs.tools.reader.impl.commons :refer
@@ -105,40 +104,40 @@
 
 (defn- read-unicode-char
   ([token offset length base]
-     (let [l (+ offset length)]
-       (when-not (== (count token) l)
-         (throw (ex-info. (str "Invalid unicode character: \\" token)
-                          {:type :illegal-argument})))
-       (loop [i offset uc 0]
-         (if (== i l)
-           (js/String.fromCharCode uc)
-           (let [d (char-code (nth token i) base)]
-             (if (== d -1)
-               (throw (ex-info. (str "Invalid digit: " (nth token i))
-                                {:type :illegal-argument}))
-               (recur (inc i) (+ d (* uc base)))))))))
+   (let [l (+ offset length)]
+     (when-not (== (count token) l)
+       (throw (ex-info. (str "Invalid unicode character: \\" token)
+                        {:type :illegal-argument})))
+     (loop [i offset uc 0]
+       (if (== i l)
+         (js/String.fromCharCode uc)
+         (let [d (char-code (nth token i) base)]
+           (if (== d -1)
+             (throw (ex-info. (str "Invalid digit: " (nth token i))
+                              {:type :illegal-argument}))
+             (recur (inc i) (+ d (* uc base)))))))))
 
   ([rdr initch base length exact?]
-     (loop [i 1 uc (char-code initch base)]
-       (if (== uc -1)
-         (throw (ex-info. (str "Invalid digit: " initch)
-                          {:type :illegal-argument}))
-         (if-not (== i length)
-           (let [ch (peek-char rdr)]
-             (if (or (whitespace? ch)
-                     (macros ch)
-                     (nil? ch))
-               (if exact?
-                 (throw (ex-info. (str "Invalid character length: " i ", should be: " length)
+   (loop [i 1 uc (char-code initch base)]
+     (if (== uc -1)
+       (throw (ex-info. (str "Invalid digit: " initch)
+                        {:type :illegal-argument}))
+       (if-not (== i length)
+         (let [ch (peek-char rdr)]
+           (if (or (whitespace? ch)
+                   (macros ch)
+                   (nil? ch))
+             (if exact?
+               (throw (ex-info. (str "Invalid character length: " i ", should be: " length)
+                                {:type :illegal-argument}))
+               (js/String.fromCharCode uc))
+             (let [d (char-code ch base)]
+               (read-char rdr)
+               (if (== d -1)
+                 (throw (ex-info. (str "Invalid digit: " ch)
                                   {:type :illegal-argument}))
-                 (js/String.fromCharCode uc))
-               (let [d (char-code ch base)]
-                 (read-char rdr)
-                 (if (== d -1)
-                   (throw (ex-info. (str "Invalid digit: " ch)
-                                    {:type :illegal-argument}))
-                   (recur (inc i) (+ d (* uc base)))))))
-           (js/String.fromCharCode uc))))))
+                 (recur (inc i) (+ d (* uc base)))))))
+         (js/String.fromCharCode uc))))))
 
 (def ^:private ^:const upper-limit (.charCodeAt \uD7ff 0))
 (def ^:private ^:const lower-limit (.charCodeAt \uE000 0))
@@ -158,35 +157,35 @@
             token-len (count token)]
         (cond
 
-         (== 1 token-len)  (nth token 0) ;;; no char type - so can't ensure/cache char
+          (== 1 token-len)  (nth token 0) ;;; no char type - so can't ensure/cache char
 
-         (= token "newline") \newline
-         (= token "space") \space
-         (= token "tab") \tab
-         (= token "backspace") \backspace
-         (= token "formfeed") \formfeed
-         (= token "return") \return
+          (= token "newline") \newline
+          (= token "space") \space
+          (= token "tab") \tab
+          (= token "backspace") \backspace
+          (= token "formfeed") \formfeed
+          (= token "return") \return
 
-         (gs/startsWith token "u")
-         (let [c (read-unicode-char token 1 4 16)
-               ic (.charCodeAt c 0)]
-           (if (and (> ic upper-limit)
-                    (< ic lower-limit))
-             (reader-error rdr "Invalid character constant: \\u" c)
-             c))
+          (gs/startsWith token "u")
+          (let [c (read-unicode-char token 1 4 16)
+                ic (.charCodeAt c 0)]
+            (if (and (> ic upper-limit)
+                     (< ic lower-limit))
+              (reader-error rdr "Invalid character constant: \\u" c)
+              c))
 
-         (gs/startsWith token "o")
-         (let [len (dec token-len)]
-           (if (> len 3)
-             (reader-error rdr "Invalid octal escape sequence length: " len)
-             (let [offset 1
-                   base 8
-                   uc (read-unicode-char token offset len base)]
-               (if-not (valid-octal? (subs token offset) base)
-                 (reader-error rdr "Octal escape sequence must be in range [0, 377]")
-                 uc))))
+          (gs/startsWith token "o")
+          (let [len (dec token-len)]
+            (if (> len 3)
+              (reader-error rdr "Invalid octal escape sequence length: " len)
+              (let [offset 1
+                    base 8
+                    uc (read-unicode-char token offset len base)]
+                (if-not (valid-octal? (subs token offset) base)
+                  (reader-error rdr "Octal escape sequence must be in range [0, 377]")
+                  uc))))
 
-         :else (reader-error rdr "Unsupported character: \\" token)))
+          :else (reader-error rdr "Unsupported character: \\" token)))
       (reader-error rdr "EOF while reading character"))))
 
 (defn ^:private starting-line-col-info [rdr]
@@ -344,9 +343,9 @@
 
 (def ^:dynamic *alias-map*
   "Map from ns alias to ns, if non-nil, it will be used to resolve read-time
-   ns aliases instead of (ns-aliases *ns*).
+  ns aliases instead of (ns-aliases *ns*).
 
-   Defaults to nil"
+  Defaults to nil"
   nil)
 
 (defn- read-keyword
@@ -376,19 +375,20 @@
   "Read metadata and return the following object with the metadata applied"
   [rdr _ opts pending-forms]
   (log-source rdr
-    (let [[line column] (starting-line-col-info rdr)
-          m (desugar-meta (read* rdr true nil opts pending-forms))]
-      (when-not (map? m)
-        (reader-error rdr "Metadata must be Symbol, Keyword, String or Map"))
-      (let [o (read* rdr true nil opts pending-forms)]
-        (if (satisfies? IMeta o)
-          (let [m (if (and line (seq? o))
-                    (assoc m :line line :column column)
-                    m)]
-            (if (satisfies? IWithMeta o)
-              (with-meta o (merge (meta o) m))
-              (reset-meta! o m)))
-          (reader-error rdr "Metadata can only be applied to IMetas"))))))
+    (fn []
+      (let [[line column] (starting-line-col-info rdr)
+            m (desugar-meta (read* rdr true nil opts pending-forms))]
+        (when-not (map? m)
+          (reader-error rdr "Metadata must be Symbol, Keyword, String or Map"))
+        (let [o (read* rdr true nil opts pending-forms)]
+          (if (satisfies? IMeta o)
+            (let [m (if (and line (seq? o))
+                      (assoc m :line line :column column)
+                      m)]
+              (if (satisfies? IWithMeta o)
+                (with-meta o (merge (meta o) m))
+                (reset-meta! o m)))
+            (reader-error rdr "Metadata can only be applied to IMetas")))))))
 
 (defn- read-set
   [rdr _ opts pending-forms]
@@ -499,21 +499,21 @@
 
 (comment ;;; not going to implement reader conditionals atm.
   (defn- read-cond
-   [rdr _ opts pending-forms]
-   (when (not (and opts (#{:allow :preserve} (:read-cond opts))))
-     (throw (RuntimeException. "Conditional read not allowed")))
-   (if-let [ch (read-char rdr)]
-     (let [splicing (= ch \@)
-           ch (if splicing (read-char rdr) ch)]
-       (if-let [ch (if (whitespace? ch) (read-past whitespace? rdr) ch)]
-         (if (not= ch \()
-           (throw (RuntimeException. "read-cond body must be a list"))
-           (binding [*suppress-read* (or *suppress-read* (= :preserve (:read-cond opts)))]
-             (if *suppress-read*
-               (reader-conditional (read-list rdr ch opts pending-forms) splicing)
-               (read-cond-delimited rdr splicing opts pending-forms))))
-         (reader-error rdr "EOF while reading character")))
-     (reader-error rdr "EOF while reading character"))))
+    [rdr _ opts pending-forms]
+    (when (not (and opts (#{:allow :preserve} (:read-cond opts))))
+      (throw (RuntimeException. "Conditional read not allowed")))
+    (if-let [ch (read-char rdr)]
+      (let [splicing (= ch \@)
+            ch (if splicing (read-char rdr) ch)]
+        (if-let [ch (if (whitespace? ch) (read-past whitespace? rdr) ch)]
+          (if (not= ch \()
+            (throw (RuntimeException. "read-cond body must be a list"))
+            (binding [*suppress-read* (or *suppress-read* (= :preserve (:read-cond opts)))]
+              (if *suppress-read*
+                (reader-conditional (read-list rdr ch opts pending-forms) splicing)
+                (read-cond-delimited rdr splicing opts pending-forms))))
+          (reader-error rdr "EOF while reading character")))
+      (reader-error rdr "EOF while reading character"))))
 
 (def ^:private ^:dynamic arg-env)
 
@@ -564,21 +564,21 @@
     (read-symbol rdr pct)
     (let [ch (peek-char rdr)]
       (cond
-       (or (whitespace? ch)
-           (macro-terminating? ch)
-           (nil? ch))
-       (register-arg 1)
+        (or (whitespace? ch)
+            (macro-terminating? ch)
+            (nil? ch))
+        (register-arg 1)
 
-       (identical? ch \&)
-       (do (read-char rdr)
-           (register-arg -1))
+        (identical? ch \&)
+        (do (read-char rdr)
+            (register-arg -1))
 
-       :else
-       (let [n (read* rdr true nil opts pending-forms)]
-         (if-not (integer? n)
-           (throw (ex-info "Arg literal must be %, %& or %integer"
-                           {:type :illegal-state}))
-           (register-arg n)))))))
+        :else
+        (let [n (read* rdr true nil opts pending-forms)]
+          (if-not (integer? n)
+            (throw (ex-info "Arg literal must be %, %& or %integer"
+                            {:type :illegal-state}))
+            (register-arg n)))))))
 
 (defn- read-eval
   "Evaluate a reader literal"
@@ -616,9 +616,9 @@
       (let [item (first s)
             ret (conj! r
                        (cond
-                        (unquote? item)          (list 'clojure.core/list (second item))
-                        (unquote-splicing? item) (second item)
-                        :else                    (list 'clojure.core/list (syntax-quote* item))))]
+                         (unquote? item)          (list 'clojure.core/list (second item))
+                         (unquote-splicing? item) (second item)
+                         :else                    (list 'clojure.core/list (syntax-quote* item))))]
         (recur (next s) ret))
       (seq (persistent! r)))))
 
@@ -629,8 +629,8 @@
     (if s
       (let [e (first s)]
         (recur (next s) (-> key-vals
-                          (conj! (key e))
-                          (conj! (val e)))))
+                            (conj! (key e))
+                            (conj! (val e)))))
       (seq (persistent! key-vals)))))
 
 (defn- register-gensym [sym]
@@ -677,62 +677,62 @@
 (defn- syntax-quote* [form]
   (->>
    (cond
-    (special-symbol? form) (list 'quote form)
+     (special-symbol? form) (list 'quote form)
 
-    (symbol? form)
-    (list 'quote
-          (if (namespace form)
-            (->UnresolvedSymbol (symbol (namespace form)) (symbol (name form)))
-            (let [sym (name form)]
-              (cond
-               (gs/endsWith sym "#")
-               (register-gensym form)
+     (symbol? form)
+     (list 'quote
+           (if (namespace form)
+             (->UnresolvedSymbol (symbol (namespace form)) (symbol (name form)))
+             (let [sym (name form)]
+               (cond
+                 (gs/endsWith sym "#")
+                 (register-gensym form)
 
-               (gs/startsWith sym ".")
-               form
+                 (gs/startsWith sym ".")
+                 form
 
-               (gs/endsWith sym ".")
-               (->UnresolvedSymbol nil sym)
+                 (gs/endsWith sym ".")
+                 (->UnresolvedSymbol nil sym)
 
-               :else (->UnresolvedSymbol nil form)))))
+                 :else (->UnresolvedSymbol nil form)))))
 
-    (unquote? form) (second form)
-    (unquote-splicing? form) (throw (ex-info "splice not in list"
-                                             {:type :illegal-state}))
+     (unquote? form) (second form)
+     (unquote-splicing? form) (throw (ex-info "splice not in list"
+                                              {:type :illegal-state}))
 
-    (coll? form)
-    (cond
+     (coll? form)
+     (cond
 
-     (satisfies? IRecord form) form
-     (map? form) (syntax-quote-coll (map-func form) (flatten-map form))
-     (vector? form) (list 'cljs.core/vec (syntax-quote-coll nil form))
-     (set? form) (syntax-quote-coll 'cljs.core/hash-set form)
-     (or (seq? form) (list? form))
-     (let [seq (seq form)]
-       (if seq
-         (syntax-quote-coll nil seq)
-         '(cljs.core/list)))
+       (satisfies? IRecord form) form
+       (map? form) (syntax-quote-coll (map-func form) (flatten-map form))
+       (vector? form) (list 'cljs.core/vec (syntax-quote-coll nil form))
+       (set? form) (syntax-quote-coll 'cljs.core/hash-set form)
+       (or (seq? form) (list? form))
+       (let [seq (seq form)]
+         (if seq
+           (syntax-quote-coll nil seq)
+           '(cljs.core/list)))
 
-     :else (throw (ex-info "Unknown Collection type"
-                           {:type :unsupported-operation})))
+       :else (throw (ex-info "Unknown Collection type"
+                             {:type :unsupported-operation})))
 
-    (or (keyword? form)
-        (number? form)
-        ;; (char? form) ;;; no char type in cljs
-        (string? form)
-        (nil? form)
-        (bool? form)
-        (instance? js/RegExp form))
-    form
+     (or (keyword? form)
+         (number? form)
+         ;; (char? form) ;;; no char type in cljs
+         (string? form)
+         (nil? form)
+         (bool? form)
+         (instance? js/RegExp form))
+     form
 
-    :else (list 'quote form))
+     :else (list 'quote form))
    (add-meta form)))
 
 (defn- read-syntax-quote
   [rdr backquote opts pending-forms]
   (binding [gensym-env {}]
     (-> (read* rdr true nil opts pending-forms)
-      syntax-quote*)))
+        syntax-quote*)))
 
 (defn- macros [ch]
   (case ch
@@ -772,37 +772,37 @@
 (comment
   ;;; too much java in here, re-implement
   (defn- read-ctor [rdr class-name opts pending-forms]
-   (when-not *read-eval*
-     (reader-error "Record construction syntax can only be used when *read-eval* == true"))
-   (let [class (Class/forName (name class-name) false (RT/baseLoader))
-         ch (read-past whitespace? rdr)] ;; differs from clojure
-     (if-let [[end-ch form] (case ch
-                              \[ [\] :short]
-                              \{ [\} :extended]
-                              nil)]
-       (let [entries (to-array (read-delimited end-ch rdr opts pending-forms))
-             numargs (count entries)
-             all-ctors (.getConstructors class)
-             ctors-num (count all-ctors)]
-         (case form
-           :short
-           (loop [i 0]
-             (if (>= i ctors-num)
-               (reader-error rdr "Unexpected number of constructor arguments to " (str class)
-                             ": got" numargs)
-               (if (== (count (.getParameterTypes (aget all-ctors i)))
-                       numargs)
-                 (Reflector/invokeConstructor class entries)
-                 (recur (inc i)))))
-           :extended
-           (let [vals (RT/map entries)]
-             (loop [s (keys vals)]
-               (if s
-                 (if-not (keyword? (first s))
-                   (reader-error rdr "Unreadable ctor form: key must be of type clojure.lang.Keyword")
-                   (recur (next s)))))
-             (Reflector/invokeStaticMethod class "create" (object-array [vals])))))
-       (reader-error rdr "Invalid reader constructor form")))))
+    (when-not *read-eval*
+      (reader-error "Record construction syntax can only be used when *read-eval* == true"))
+    (let [class (Class/forName (name class-name) false (RT/baseLoader))
+          ch (read-past whitespace? rdr)] ;; differs from clojure
+      (if-let [[end-ch form] (case ch
+                               \[ [\] :short]
+                               \{ [\} :extended]
+                               nil)]
+        (let [entries (to-array (read-delimited end-ch rdr opts pending-forms))
+              numargs (count entries)
+              all-ctors (.getConstructors class)
+              ctors-num (count all-ctors)]
+          (case form
+            :short
+            (loop [i 0]
+              (if (>= i ctors-num)
+                (reader-error rdr "Unexpected number of constructor arguments to " (str class)
+                              ": got" numargs)
+                (if (== (count (.getParameterTypes (aget all-ctors i)))
+                        numargs)
+                  (Reflector/invokeConstructor class entries)
+                  (recur (inc i)))))
+            :extended
+            (let [vals (RT/map entries)]
+              (loop [s (keys vals)]
+                (if s
+                  (if-not (keyword? (first s))
+                    (reader-error rdr "Unreadable ctor form: key must be of type clojure.lang.Keyword")
+                    (recur (next s)))))
+              (Reflector/invokeStaticMethod class "create" (object-array [vals])))))
+        (reader-error rdr "Invalid reader constructor form")))))
 
 (defn- read-tagged [rdr initch opts pending-forms]
   (let [tag (read* rdr true nil opts pending-forms)]
@@ -843,49 +843,50 @@
 
 (def ^:dynamic *data-readers*
   "Map from reader tag symbols to data reader Vars.
-   Reader tags without namespace qualifiers are reserved for Clojure.
-   This light version of tools.reader has no implementation for default
-   reader tags such as #inst and #uuid."
+  Reader tags without namespace qualifiers are reserved for Clojure.
+  This light version of tools.reader has no implementation for default
+  reader tags such as #inst and #uuid."
   {})
 
 (def ^:dynamic *default-data-reader-fn*
   "When no data reader is found for a tag and *default-data-reader-fn*
-   is non-nil, it will be called with two arguments, the tag and the value.
-   If *default-data-reader-fn* is nil (the default value), an exception
-   will be thrown for the unknown tag."
+  is non-nil, it will be called with two arguments, the tag and the value.
+  If *default-data-reader-fn* is nil (the default value), an exception
+  will be thrown for the unknown tag."
   nil)
 
 (def ^:dynamic *suppress-read* false)
 
 (def default-data-readers
   "Default map of data reader functions provided by Clojure.
-   May be overridden by binding *data-readers*"
+  May be overridden by binding *data-readers*"
   {})
 
 (defn ^:private read*
   ([reader eof-error? sentinel opts pending-forms]
-     (read* reader eof-error? sentinel nil opts pending-forms))
+   (read* reader eof-error? sentinel nil opts pending-forms))
   ([reader eof-error? sentinel return-on opts pending-forms]
-     (when (= :unknown *read-eval*)
-       (reader-error "Reading disallowed - *read-eval* bound to :unknown"))
-     (try
-       (loop []
-         (log-source reader
-           (if (seq pending-forms)
-             (rest pending-forms)
-             (let [ch (read-char reader)]
-               (cond
-                 (whitespace? ch) (recur)
-                 (nil? ch) (if eof-error? (reader-error reader "EOF") sentinel)
-                 (= ch return-on) READ_FINISHED
-                 (number-literal? reader ch) (read-number reader ch)
-                 :else (let [f (macros ch)]
-                         (if f
-                           (let [res (f reader ch opts pending-forms)]
-                             (if (identical? res reader)
-                               (recur)
-                               res))
-                           (read-symbol reader ch))))))))
+   (when (= :unknown *read-eval*)
+     (reader-error "Reading disallowed - *read-eval* bound to :unknown"))
+   (try
+     ((fn target []
+        (log-source reader
+          (fn []
+            (if (seq pending-forms)
+              (rest pending-forms)
+              (let [ch (read-char reader)]
+                (cond
+                  (whitespace? ch) (trampoline target)
+                  (nil? ch) (if eof-error? (reader-error reader "EOF") sentinel)
+                  (= ch return-on) READ_FINISHED
+                  (number-literal? reader ch) (read-number reader ch)
+                  :else (let [f (macros ch)]
+                          (if f
+                            (let [res (f reader ch opts pending-forms)]
+                              (if (identical? res reader)
+                                (trampoline target)
+                                res))
+                            (read-symbol reader ch))))))))))
        (catch js/Error e
          (.log js/console (.-stack e))
          (if (ex-info? e)

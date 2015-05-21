@@ -10,9 +10,6 @@
       :author "Bronsa"}
   cljs.tools.reader.reader-types
   (:refer-clojure :exclude [char read-line])
-  (:require-macros
-   [cljs.tools.reader.impl.utils :refer [compile-if]]
-   )
   (:require
    [cljs.tools.reader.impl.utils :refer [char whitespace? newline?]])
   (:import
@@ -188,17 +185,6 @@ logging frames. Called when pushing a character back."
   (get-column-number [reader] (int column))
   (get-file-name [reader] file-name))
 
-(defn log-source*
-  [reader f]
-  (let [frame (.-source-log-frames reader)
-        buffer (:buffer @frame)
-        new-frame (assoc-in @frame [:offset] (.getLength buffer))]
-    (let [frame new-frame]
-      (let [ret (f)]
-        (if (satisfies? IMeta ret)
-          (merge-meta ret {:source (peek-source-log frame)})
-          ret)))))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public API
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -278,3 +264,23 @@ logging frames. Called when pushing a character back."
   [rdr]
   (when (indexing-reader? rdr)
     (== 1 (get-column-number rdr))))
+
+(defn log-source*
+  [reader f]
+  (let [frame (.-source-log-frames reader)
+        buffer (:buffer @frame)
+        new-frame (assoc-in @frame [:offset] (.getLength buffer))]
+    (let [frame new-frame]
+      (let [ret (f)]
+        (if (satisfies? IMeta ret)
+          (merge-meta ret {:source (peek-source-log frame)})
+          ret)))))
+
+(defn log-source
+  "If reader is a SourceLoggingPushbackReader, execute body in a source
+  logging context. Otherwise, execute body, returning the result."
+  [reader body-fn]
+  (if (and (cljs.tools.reader.reader-types/source-logging-reader? reader)
+           (not (cljs.tools.reader.impl.utils/whitespace? (peek-char reader))))
+    (log-source* reader body-fn)
+    (body-fn)))
