@@ -4,7 +4,8 @@
     [cljs.test :as t :refer-macros [deftest is run-tests]]
     [cljs.tools.reader :as reader :refer
      [*data-readers* read-string ->UnresolvedKeyword
-      ->UnresolvedSymbol ->SyntaxQuotedForm]]))
+      ->UnresolvedSymbol ->SyntaxQuotedForm ->ReadRecord]]
+    [cljs.tools.reader.reader-types :as rt]))
 
 ;;==============================================================================
 ;; common_tests.clj
@@ -149,8 +150,6 @@
   (is (= '#{foo #{bar} baz} (read-string "#{foo #{bar} baz}")))
 )
 
-(def *ns* 'user)
-
 (deftest read-keyword
   (is (= :foo-bar (read-string ":foo-bar")))
   (is (= :foo/bar (read-string ":foo/bar")))
@@ -225,15 +224,20 @@
 (defrecord foo [])
 (defrecord bar [baz buz])
 
-#_(deftest read-record
-  (prn 'clojure.tools.reader_test.foo.)
-  (is (= (foo.) (read-string "#clojure.tools.reader_test.foo[]")))
-  (is (= (foo.) (read-string "#clojure.tools.reader_test.foo []"))) ;; not valid in clojure
-  (is (= (foo.) (read-string "#clojure.tools.reader_test.foo{}")))
-  (is (= (assoc (foo.) :foo 'bar) (read-string "#clojure.tools.reader_test.foo{:foo bar}")))
+(deftest read-record
+  (is (= (->ReadRecord "cljs.tools.reader_test" "foo" :short [])
+         (read-string "#cljs.tools.reader_test.foo[]")))
+  (is (= (->ReadRecord "cljs.tools.reader_test" "foo" :short [])
+         (read-string "#cljs.tools.reader_test.foo []"))) ;; not valid in clojure
+  (is (= (->ReadRecord "cljs.tools.reader_test" "foo" :extended {})
+         (read-string "#cljs.tools.reader_test.foo{}")))
+  (is (= (->ReadRecord "cljs.tools.reader_test" "foo" :extended {:foo 'bar})
+         (read-string "#cljs.tools.reader_test.foo{:foo bar}")))
 
-  (is (= (map->bar {}) (read-string "#clojure.tools.reader_test.bar{}")))
-  (is (= (bar. 1 nil) (read-string "#clojure.tools.reader_test.bar{:baz 1}")))
+  (is (= (map->bar {})
+         (meta (reader/read (rt/source-logging-push-back-reader "#clojure.tools.reader_test.bar{}") false nil))))
+  (is (= (->ReadRecord "cljs.tools.reader_test" "foo" :extended {:baz 1})
+         (read-string "#clojure.tools.reader_test.bar{:baz 1}")))
   (is (= (bar. 1 nil) (read-string "#clojure.tools.reader_test.bar[1 nil]")))
   (is (= (bar. 1 2) (read-string "#clojure.tools.reader_test.bar[1 2]"))))
 
