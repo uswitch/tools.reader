@@ -10,9 +10,9 @@
   Reader
   (read-char [_]
     (str (.read readable 1)))
-  (peek-char [_]
-    (let [char (read-char readable)]
-      (unread readable char)
+  (peek-char [this]
+    (let [char (read-char this)]
+      (unread this char)
       char))
   IPushbackReader
   (unread [_ char]
