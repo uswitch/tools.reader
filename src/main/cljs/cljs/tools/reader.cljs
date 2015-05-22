@@ -491,32 +491,48 @@
     (if (nil? result)
       rdr
       (if splicing
-        (if (instance? List result)
-          (do
-            (ga/extend result pending-forms)
-            rdr)
-          (reader-error rdr "Spliced form list in read-cond-splicing must implement java.util.List."))
+        (do
+          (if (satisfies? ISequential result)
+           (do
+             (ga/extend result pending-forms)
+             rdr)
+           (reader-error rdr "Spliced form list in read-cond-splicing must implement java.util.List.")))
         result))))
 
-(comment ;;; not going to implement reader conditionals atm.
-  (defn- read-cond
-    [rdr _ opts pending-forms]
-    (when (not (and opts (#{:allow :preserve} (:read-cond opts))))
-      (throw (ex-info "Conditional read not allowed"
-                      {:type :runtime-exception})))
-    (if-let [ch (read-char rdr)]
-      (let [splicing (= ch \@)
-            ch (if splicing (read-char rdr) ch)]
-        (if-let [ch (if (whitespace? ch) (read-past whitespace? rdr) ch)]
-          (if (not= ch \()
-            (throw (ex-info "read-cond body must be a list"
-                            {:type :runtime-exception}))
-            (binding [*suppress-read* (or *suppress-read* (= :preserve (:read-cond opts)))]
-              (if *suppress-read*
-                (reader-conditional (read-list rdr ch opts pending-forms) splicing)
-                (read-cond-delimited rdr splicing opts pending-forms))))
-          (reader-error rdr "EOF while reading character")))
-      (reader-error rdr "EOF while reading character"))))
+
+(defrecord ReaderConditional [form splicing?])
+
+(defn reader-conditional?
+  "Return true if the value is the data representation of a reader conditional"
+  {:added "1.7"}
+  [value]
+  (instance? ReaderConditional value))
+
+(defn reader-conditional
+  "Construct a data representation of a reader conditional.
+  If true, splicing? indicates read-cond-splicing."
+  {:added "1.7"}
+  [form splicing?]
+  (->ReaderConditional form splicing?))
+
+(defn- read-cond
+  [rdr _ opts pending-forms]
+  (when (not (and opts (#{:allow :preserve} (:read-cond opts))))
+    (throw (ex-info "Conditional read not allowed"
+                    {:type :runtime-exception})))
+  (if-let [ch (read-char rdr)]
+    (let [splicing (= ch \@)
+          ch (if splicing (read-char rdr) ch)]
+      (if-let [ch (if (whitespace? ch) (read-past whitespace? rdr) ch)]
+        (if (not= ch \()
+          (throw (ex-info "read-cond body must be a list"
+                          {:type :runtime-exception}))
+          (binding [*suppress-read* (or *suppress-read* (= :preserve (:read-cond opts)))]
+            (if *suppress-read*
+              (reader-conditional (read-list rdr ch opts pending-forms) splicing)
+              (read-cond-delimited rdr splicing opts pending-forms))))
+        (reader-error rdr "EOF while reading character")))
+    (reader-error rdr "EOF while reading character")))
 
 (def ^:private ^:dynamic arg-env)
 
@@ -769,7 +785,7 @@
     \" read-regex
     \! read-comment
     \_ read-discard
-    ;; \? read-cond ;;; not going to implement reader conditionals atm.
+    \? read-cond
     nil))
 
 (defrecord ReadRecord [ns name form values])

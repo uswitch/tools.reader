@@ -1,7 +1,7 @@
 (ns cljs.tools.reader-test
   (:refer-clojure :exclude [read-string])
   (:require
-    [cljs.test :as t :refer-macros [deftest is run-tests]]
+    [cljs.test :as t :refer-macros [are deftest is run-tests]]
     [cljs.tools.reader :as reader :refer
      [*data-readers* read-string ->UnresolvedKeyword
       ->UnresolvedSymbol ->SyntaxQuotedForm ->ReadRecord]]
@@ -251,6 +251,51 @@
           [{:line 2 :column 0 :end-line 2 :end-column 1}]
           [{:line 2, :column 1, :end-line 2, :end-column 14} '(def test2 9)]
           [{:line 3, :column 0, :end-line 3, :end-column 1}]])))
+
+(defrecord JSValue [v])
+
+(deftest reader-conditionals
+  (let [opts {:read-cond :allow :features #{:clj}}]
+    (are [out s opts] (= out (read-string opts s))
+         ;; basic read-cond
+         '[foo-form] "[#?(:foo foo-form :bar bar-form)]" {:read-cond :allow :features #{:foo}}
+         '[bar-form] "[#?(:foo foo-form :bar bar-form)]" {:read-cond :allow :features #{:bar}}
+         '[foo-form] "[#?(:foo foo-form :bar bar-form)]" {:read-cond :allow :features #{:foo :bar}}
+         '[] "[#?(:foo foo-form :bar bar-form)]" {:read-cond :allow :features #{:baz}}
+
+         ;; environmental features
+         "clojure" "#?(:clj \"clojure\" :cljs \"clojurescript\" :default \"default\")"  opts
+
+         ;; default features
+         "default" "#?(:cljr \"clr\" :cljs \"cljs\" :default \"default\")" opts
+
+         ;; splicing
+         [] "[#?@(:clj [])]" opts
+         [:a] "[#?@(:clj [:a])]" opts
+         [:a :b] "[#?@(:clj [:a :b])]" opts
+         [:a :b :c] "[#?@(:clj [:a :b :c])]" opts
+
+         ;; nested splicing
+         [:a :b :c :d :e] "[#?@(:clj [:a #?@(:clj [:b #?@(:clj [:c]) :d]):e])]" opts
+         '(+ 1 (+ 2 3)) "(+ #?@(:clj [1 (+ #?@(:clj [2 3]))]))" opts
+         '(+ (+ 2 3) 1) "(+ #?@(:clj [(+ #?@(:clj [2 3])) 1]))" opts
+         [:a [:b [:c] :d] :e] "[#?@(:clj [:a [#?@(:clj [:b #?@(:clj [[:c]]) :d])] :e])]" opts
+
+         ;; bypass unknown tagged literals
+         [1 2 3] "#?(:cljs #js [1 2 3] :clj [1 2 3])" opts
+         :clojure "#?(:foo #some.nonexistent.Record {:x 1} :clj :clojure)" opts)
+
+    #_(are [re s opts] (is (thrown-with-msg? RuntimeException re (read-string opts s)))
+         #"Feature should be a keyword" "#?((+ 1 2) :a)" opts
+         #"even number of forms" "#?(:cljs :a :clj)" opts
+         #"read-cond-splicing must implement" "#?@(:clj :a)" opts
+         #"is reserved" "#?@(:foo :a :else :b)" opts
+         #"must be a list" "#?[:foo :a :else :b]" opts
+         #"Conditional read not allowed" "#?[:clj :a :default nil]" {:read-cond :BOGUS}
+         #"Conditional read not allowed" "#?[:clj :a :default nil]" {}))
+  (binding [*data-readers* {'js (fn [v] (JSValue. v) )}]
+    (is (= (JSValue. [1 2 3])
+           (read-string {:features #{:cljs} :read-cond :allow} "#?(:cljs #js [1 2 3] :foo #foo [1])")))))
 
 (enable-console-print!)
 (run-tests)
