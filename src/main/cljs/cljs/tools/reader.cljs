@@ -494,11 +494,10 @@
         (do
           (if (satisfies? ISequential result)
            (do
-             (ga/extend result pending-forms)
+             (ga/insertArrayAt pending-forms (to-array result) 0)
              rdr)
            (reader-error rdr "Spliced form list in read-cond-splicing must implement java.util.List.")))
         result))))
-
 
 (defrecord ReaderConditional [form splicing?])
 
@@ -521,17 +520,18 @@
     (throw (ex-info "Conditional read not allowed"
                     {:type :runtime-exception})))
   (if-let [ch (read-char rdr)]
-    (let [splicing (= ch \@)
-          ch (if splicing (read-char rdr) ch)]
-      (if-let [ch (if (whitespace? ch) (read-past whitespace? rdr) ch)]
-        (if (not= ch \()
-          (throw (ex-info "read-cond body must be a list"
-                          {:type :runtime-exception}))
-          (binding [*suppress-read* (or *suppress-read* (= :preserve (:read-cond opts)))]
-            (if *suppress-read*
-              (reader-conditional (read-list rdr ch opts pending-forms) splicing)
-              (read-cond-delimited rdr splicing opts pending-forms))))
-        (reader-error rdr "EOF while reading character")))
+    (do
+      (let [splicing (= ch \@)
+           ch (if splicing (read-char rdr) ch)]
+       (if-let [ch (if (whitespace? ch) (read-past whitespace? rdr) ch)]
+         (if (not= ch \()
+           (throw (ex-info "read-cond body must be a list"
+                           {:type :runtime-exception}))
+           (binding [*suppress-read* (or *suppress-read* (= :preserve (:read-cond opts)))]
+             (if *suppress-read*
+               (reader-conditional (read-list rdr ch opts pending-forms) splicing)
+               (read-cond-delimited rdr splicing opts pending-forms))))
+         (reader-error rdr "EOF while reading character"))))
     (reader-error rdr "EOF while reading character")))
 
 (def ^:private ^:dynamic arg-env)
@@ -883,7 +883,9 @@
         (log-source reader
           (fn []
             (if (seq pending-forms)
-              (rest pending-forms)
+              (let [form (first pending-forms)]
+                 (ga/removeAt pending-forms 0)
+                 form)
               (let [ch (read-char reader)]
                 (cond
                   (whitespace? ch) (trampoline target)
