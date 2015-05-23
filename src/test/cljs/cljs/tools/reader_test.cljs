@@ -335,6 +335,3 @@
                "#?(:cljs #js {:y 2, :x 1})"
                "#?(:clj #cljs.test_clojure.reader.TestRecord [42 85])"]]
       (is (= s (pr-str (read-string {:read-cond :preserve} s)))))))
-
-(enable-console-print!)
-(run-tests)

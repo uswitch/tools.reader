@@ -1,4 +1,4 @@
-(ns clojure.tools.reader-edn-test
+(ns cljs.tools.reader-edn-test
   (:require
     [cljs.test :as t :refer-macros [deftest is run-tests]]
     [cljs.tools.reader.edn :as edn]))
@@ -38,6 +38,3 @@
   (let [my-unknown (fn [tag val] {:unknown-tag tag :value val})]
     (is (= {:unknown-tag 'foo :value 'bar}
            (edn/read-string {:default my-unknown} "#foo bar")))))
-
-(enable-console-print!)
-(run-tests)

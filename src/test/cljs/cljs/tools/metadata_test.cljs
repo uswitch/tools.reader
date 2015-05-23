@@ -161,7 +161,3 @@
                    (reader-types/indexing-push-back-reader 1 "vector.clj"))
         first-form (read reader)]
     (compare-forms-with-meta expected-vector first-form)))
-
-
-(enable-console-print!)
-(run-tests)

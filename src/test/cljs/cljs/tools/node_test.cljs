@@ -55,6 +55,3 @@
                        :private true})))
              (is (= (read source-logging-reader false nil)
                     '(defrecord UnresolvedKeyword [namespace name]))))))))
-
-(enable-console-print!)
-(run-tests)
