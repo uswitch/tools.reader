@@ -193,7 +193,7 @@
 (deftest read-var
   (is (= '(var foo) (read-string "#'foo"))))
 
-(deftest read-fn ;; need thread-bound? (or the functionality required) to do this
+(deftest read-fn
   (is (= '(fn* [] (foo bar baz)) (read-string "#(foo bar baz)"))))
 
 (defn inst [s]
@@ -299,21 +299,7 @@
          #"is reserved" "#?@(:foo :a :else :b)" opts
          #"must be a list" "#?[:foo :a :else :b]" opts
          #"Conditional read not allowed" "#?[:clj :a :default nil]" {:read-cond :BOGUS}
-         #"Conditional read not allowed" "#?[:clj :a :default nil]" {})
-
-    #_(are [re type s opts] (is (ex-match? (try
-                                           (read-string opts s)
-                                           (catch cljs.core.ExceptionInfo e e))
-                                         type
-                                         re))
-         #"Feature should be a keyword" :reader-exception "#?((+ 1 2) :a)" opts
-         #"Feature should be a keyword" :reader-exception"#?((+ 1 2) :a)" opts
-         #"even number of forms" :reader-exception "#?(:cljs :a :clj)" opts
-         #"read-cond-splicing must implement" :reader-exception "#?@(:clj :a)" opts
-         #"is reserved" :reader-exception "#?@(:foo :a :else :b)" opts
-         #"must be a list" :runtime-exception "#?[:foo :a :else :b]" opts
-         #"Conditional read not allowed" :runtime-exception "#?[:clj :a :default nil]" {:read-cond :BOGUS}
-         #"Conditional read not allowed" :runtime-exception "#?[:clj :a :default nil]" {}))
+         #"Conditional read not allowed" "#?[:clj :a :default nil]" {}))
   (binding [*data-readers* {'js (fn [v] (JSValue. v) )}]
     (is (= (JSValue. [1 2 3])
            (read-string {:features #{:cljs} :read-cond :allow} "#?(:cljs #js [1 2 3] :foo #foo [1])")))))
