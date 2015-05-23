@@ -43,6 +43,39 @@
 (defrecord UnresolvedSymbol [namespace name])
 (defrecord SyntaxQuotedForm [form])
 
+(defrecord ReadRecord [ns name form values])
+
+(defrecord ReaderConditional [form splicing?])
+
+(defn reader-conditional?
+  "Return true if the value is the data representation of a reader conditional"
+  {:added "1.7"}
+  [value]
+  (instance? ReaderConditional value))
+
+(defn reader-conditional
+  "Construct a data representation of a reader conditional.
+  If true, splicing? indicates read-cond-splicing."
+  {:added "1.7"}
+  [form splicing?]
+  (->ReaderConditional form splicing?))
+
+(extend-protocol IPrintWithWriter
+  ReaderConditional
+  (-pr-writer [coll writer opts]
+    (let [start (if (:splicing? coll) "#?@(" "#?(")]
+      (pr-sequential-writer writer pr-writer start " " ")" opts (:form coll))))
+
+  ReadRecord
+  (-pr-writer [coll writer opts]
+    (prn 'here)
+    (let [{:keys [ns name form values]} coll
+          short? (= :short form)
+          start (str \# ns \. name \[)
+          end \]
+          values (if short? values (vals values))]
+      (pr-sequential-writer writer pr-writer start " " end opts values))))
+
 (defn- macro-terminating? [ch]
   (case ch
     (\" \; \@ \^ \` \~ \( \) \[ \] \{ \} \\) true
@@ -499,27 +532,6 @@
            (reader-error rdr "Spliced form list in read-cond-splicing must implement java.util.List.")))
         result))))
 
-(defrecord ReaderConditional [form splicing?])
-
-(defn reader-conditional?
-  "Return true if the value is the data representation of a reader conditional"
-  {:added "1.7"}
-  [value]
-  (instance? ReaderConditional value))
-
-(defn reader-conditional
-  "Construct a data representation of a reader conditional.
-  If true, splicing? indicates read-cond-splicing."
-  {:added "1.7"}
-  [form splicing?]
-  (->ReaderConditional form splicing?))
-
-(extend-protocol IPrintWithWriter
-  ReaderConditional
-  (-pr-writer [coll writer opts]
-    (let [start (if (:splicing? coll) "#?@(" "#?(")]
-      (pr-sequential-writer writer pr-writer start " " ")" opts (:form coll)))))
-
 (defn- read-cond
   [rdr _ opts pending-forms]
   (when (not (and opts (#{:allow :preserve} (:read-cond opts))))
@@ -793,8 +805,6 @@
     \_ read-discard
     \? read-cond
     nil))
-
-(defrecord ReadRecord [ns name form values])
 
 (defn- read-ctor [rdr class-name opts pending-forms]
   (let [ns (namespace class-name)

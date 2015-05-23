@@ -236,11 +236,11 @@
          (read-string "#cljs.tools.reader_test.foo{:foo bar}")))
 
   (is (= (map->bar {})
-         (meta (reader/read (rt/source-logging-push-back-reader "#clojure.tools.reader_test.bar{}") false nil))))
-  (is (= (->ReadRecord "cljs.tools.reader_test" "foo" :extended {:baz 1})
-         (read-string "#clojure.tools.reader_test.bar{:baz 1}")))
-  (is (= (bar. 1 nil) (read-string "#clojure.tools.reader_test.bar[1 nil]")))
-  (is (= (bar. 1 2) (read-string "#clojure.tools.reader_test.bar[1 2]"))))
+         (meta (reader/read (rt/source-logging-push-back-reader "#cljs.tools.reader_test.bar{}") false nil))))
+  (is (= (->ReadRecord "cljs.tools.reader_test" "bar" :extended {:baz 1})
+         (read-string "#cljs.tools.reader_test.bar{:baz 1}")))
+  (is (= (bar. 1 nil) (read-string "#cljs.tools.reader_test.bar[1 nil]")))
+  (is (= (bar. 1 2) (read-string "#cljs.tools.reader_test.bar[1 2]"))))
 
 (deftest source-logging-meta-test
   (-> (loop [r (cljs.tools.reader.reader-types/source-logging-push-back-reader "(def test 8)\n(def test2 9)\n")
@@ -341,7 +341,7 @@
   (testing "print form roundtrips"
     (doseq [s ["#?(:clj foo :cljs bar)"
                "#?(:cljs #js {:x 1, :y 2})"
-               "#?(:clj #clojure.test_clojure.reader.TestRecord [42 85])"]]
+               "#?(:clj #cljs.test_clojure.reader.TestRecord [42 85])"]]
       (is (= s (pr-str (read-string {:read-cond :preserve} s)))))))
 
 (enable-console-print!)
