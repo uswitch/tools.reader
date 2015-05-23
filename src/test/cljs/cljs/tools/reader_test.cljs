@@ -73,14 +73,12 @@
 
   (is (== 42.2e3 (read-string "42.2e3")))
   (is (== +42.2e+3 (read-string "+42.2e+3")))
-  (is (== -42.2e-3 (read-string "-42.2e-3")))
-)
+  (is (== -42.2e-3 (read-string "-42.2e-3"))))
 
 (deftest read-ratio
   (is (== 4/2 (read-string "4/2")))
   (is (== 4/2 (read-string "+4/2")))
-  (is (== -4/2 (read-string "-4/2")))
-)
+  (is (== -4/2 (read-string "-4/2"))))
 
 (deftest read-symbol
   (is (= 'foo (read-string "foo")))
@@ -95,14 +93,12 @@
   (is (js/isNaN (read-string "NaN"))) ;; not sure if this should be js/NaN
   (is (= js/Number.POSITIVE_INFINITY (read-string "Infinity"))) ;; not sure if this should be js version of Infinity
   (is (= js/Number.POSITIVE_INFINITY (read-string "+Infinity"))) ;; not sure if this should be js version of Infinity
-  (is (= js/Number.NEGATIVE_INFINITY (read-string "-Infinity"))) ;; not sure if this should be js version of Infinity
-)
+  (is (= js/Number.NEGATIVE_INFINITY (read-string "-Infinity")))) ;; not sure if this should be js version of Infinity
 
 (deftest read-specials
   (is (= 'nil nil))
   (is (= 'false false))
-  (is (= 'true true))
-)
+  (is (= 'true true)))
 
 (deftest read-char
   (is (= \f (read-string "\\f")))
@@ -116,40 +112,40 @@
   (is (= \@ (read-string "\\@")))
   (is (= (char 0xd7ff) (read-string "\\ud7ff")))
   (is (= (char 0xe000) (read-string "\\ue000")))
-  (is (= (char 0xffff) (read-string "\\uffff")))
-)
+  (is (= (char 0xffff) (read-string "\\uffff"))))
 
 (deftest read-string*
   (is (= "foo bar" (read-string "\"foo bar\"")))
   (is (= "foo\\bar" (read-string "\"foo\\\\bar\"")))
   (is (= "foo\000bar" (read-string "\"foo\\000bar\"")))
   (is (= "foo\u0194bar" (read-string "\"foo\\u0194bar\"")))
-  (is (= "foo\123bar" (read-string "\"foo\\123bar\"")))
-)
+  (is (= "foo\123bar" (read-string "\"foo\\123bar\""))))
 
 (deftest read-list
   (is (= '() (read-string "()")))
   (is (= '(foo bar) (read-string "(foo bar)")))
-  (is (= '(foo (bar) baz) (read-string "(foo (bar) baz)")))
-)
+  (is (= '(foo (bar) baz) (read-string "(foo (bar) baz)"))))
 
 (deftest read-vector
   (is (= '[] (read-string "[]")))
   (is (= '[foo bar] (read-string "[foo bar]")))
-  (is (= '[foo [bar] baz] (read-string "[foo [bar] baz]")))
-)
+  (is (= '[foo [bar] baz] (read-string "[foo [bar] baz]"))))
 
 (deftest read-map
   (is (= '{} (read-string "{}")))
   (is (= '{foo bar} (read-string "{foo bar}")))
-  (is (= '{foo {bar baz}} (read-string "{foo {bar baz}}")))
-)
+  (is (= '{foo {bar baz}} (read-string "{foo {bar baz}}"))))
 
 (deftest read-set
   (is (= '#{} (read-string "#{}")))
   (is (= '#{foo bar} (read-string "#{foo bar}")))
-  (is (= '#{foo #{bar} baz} (read-string "#{foo #{bar} baz}")))
-)
+  (is (= '#{foo #{bar} baz} (read-string "#{foo #{bar} baz}"))))
+
+(deftest read-metadata
+  (is (= {:foo true} (meta (read-string "^:foo 'bar"))))
+  (is (= {:foo 'bar} (meta (read-string "^{:foo bar} 'baz"))))
+  (is (= {:tag "foo"} (meta (read-string "^\"foo\" 'bar"))))
+  (is (= {:tag 'String} (meta (read-string "^String 'x")))))
 
 (deftest read-keyword
   (is (= :foo-bar (read-string ":foo-bar")))
@@ -161,7 +157,7 @@
   (is (= :abc.def/ghi (read-string ":abc.def/ghi")))
   (is (= :abc/def.ghi (read-string ":abc/def.ghi")))
   (is (= :abc:def/ghi:jkl.mno (read-string ":abc:def/ghi:jkl.mno")))
-  (is (instance? cljs.core.Keyword (read-string ":alphabet"))) )
+  (is (instance? cljs.core.Keyword (read-string ":alphabet"))))
 
 (deftest read-regex
   (is (= (str #"\[\]?(\")\\")
