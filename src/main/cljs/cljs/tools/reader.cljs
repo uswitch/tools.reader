@@ -920,7 +920,6 @@
                                 res))
                             (read-symbol reader ch))))))))))
        (catch js/Error e
-         (.log js/console (.-stack e))
          (if (ex-info? e)
            (let [d (ex-data e)]
              (if (= :reader-exception (:type d))
