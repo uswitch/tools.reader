@@ -235,12 +235,12 @@
   (is (= (->ReadRecord "cljs.tools.reader_test" "foo" :extended {:foo 'bar})
          (read-string "#cljs.tools.reader_test.foo{:foo bar}")))
 
-  (is (= (map->bar {})
-         (meta (reader/read (rt/source-logging-push-back-reader "#cljs.tools.reader_test.bar{}") false nil))))
   (is (= (->ReadRecord "cljs.tools.reader_test" "bar" :extended {:baz 1})
          (read-string "#cljs.tools.reader_test.bar{:baz 1}")))
-  (is (= (bar. 1 nil) (read-string "#cljs.tools.reader_test.bar[1 nil]")))
-  (is (= (bar. 1 2) (read-string "#cljs.tools.reader_test.bar[1 2]"))))
+  (is (= (->ReadRecord "cljs.tools.reader_test" "bar" :short [1 nil])
+         (read-string "#cljs.tools.reader_test.bar[1 nil]")))
+  (is (= (->ReadRecord "cljs.tools.reader_test" "bar" :short [1 2])
+         (read-string "#cljs.tools.reader_test.bar[1 2]"))))
 
 (deftest source-logging-meta-test
   (-> (loop [r (cljs.tools.reader.reader-types/source-logging-push-back-reader "(def test 8)\n(def test2 9)\n")
@@ -254,6 +254,12 @@
           [{:line 3, :column 0, :end-line 3, :end-column 1}]])))
 
 (defrecord JSValue [v])
+
+(extend-protocol IPrintWithWriter
+  JSValue
+  (-pr-writer [coll writer opts]
+    (-write writer "#js")
+    (print-map coll pr-writer writer opts)))
 
 (deftest reader-conditionals
   (let [opts {:read-cond :allow :features #{:clj}}]
@@ -340,7 +346,7 @@
     (is (= :foo (get tl :no-such-key :foo))))
   (testing "print form roundtrips"
     (doseq [s ["#?(:clj foo :cljs bar)"
-               "#?(:cljs #js {:x 1, :y 2})"
+               "#?(:cljs #js {:y 2, :x 1})"
                "#?(:clj #cljs.test_clojure.reader.TestRecord [42 85])"]]
       (is (= s (pr-str (read-string {:read-cond :preserve} s)))))))
 

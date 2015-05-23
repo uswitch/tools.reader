@@ -68,13 +68,17 @@
 
   ReadRecord
   (-pr-writer [coll writer opts]
-    (prn 'here)
     (let [{:keys [ns name form values]} coll
           short? (= :short form)
-          start (str \# ns \. name \[)
+          start (str \# ns \. name " [")
           end \]
           values (if short? values (vals values))]
-      (pr-sequential-writer writer pr-writer start " " end opts values))))
+      (pr-sequential-writer writer pr-writer start " " end opts values)))
+
+  TaggedLiteral
+  (-pr-writer [coll writer opts]
+    (-write writer (str \# (:tag coll) \space))
+    (-pr-writer (:form coll) writer opts)))
 
 (defn- macro-terminating? [ch]
   (case ch
