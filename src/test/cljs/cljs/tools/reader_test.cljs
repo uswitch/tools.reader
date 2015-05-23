@@ -1,10 +1,11 @@
 (ns cljs.tools.reader-test
   (:refer-clojure :exclude [read-string])
   (:require
-    [cljs.test :as t :refer-macros [are deftest is run-tests]]
+    [cljs.test :as t :refer-macros [are deftest is run-tests testing]]
     [cljs.tools.reader :as reader :refer
      [*data-readers* read-string ->UnresolvedKeyword
-      ->UnresolvedSymbol ->SyntaxQuotedForm ->ReadRecord]]
+      ->UnresolvedSymbol ->SyntaxQuotedForm ->ReadRecord
+      reader-conditional reader-conditional?]]
     [cljs.tools.reader.reader-types :as rt]))
 
 ;;==============================================================================
@@ -285,17 +286,63 @@
          [1 2 3] "#?(:cljs #js [1 2 3] :clj [1 2 3])" opts
          :clojure "#?(:foo #some.nonexistent.Record {:x 1} :clj :clojure)" opts)
 
-    #_(are [re s opts] (is (thrown-with-msg? RuntimeException re (read-string opts s)))
+    (are [re s opts] (is (thrown-with-msg? js/Error re (read-string opts s)))
          #"Feature should be a keyword" "#?((+ 1 2) :a)" opts
          #"even number of forms" "#?(:cljs :a :clj)" opts
          #"read-cond-splicing must implement" "#?@(:clj :a)" opts
          #"is reserved" "#?@(:foo :a :else :b)" opts
          #"must be a list" "#?[:foo :a :else :b]" opts
          #"Conditional read not allowed" "#?[:clj :a :default nil]" {:read-cond :BOGUS}
-         #"Conditional read not allowed" "#?[:clj :a :default nil]" {}))
+         #"Conditional read not allowed" "#?[:clj :a :default nil]" {})
+
+    #_(are [re type s opts] (is (ex-match? (try
+                                           (read-string opts s)
+                                           (catch cljs.core.ExceptionInfo e e))
+                                         type
+                                         re))
+         #"Feature should be a keyword" :reader-exception "#?((+ 1 2) :a)" opts
+         #"Feature should be a keyword" :reader-exception"#?((+ 1 2) :a)" opts
+         #"even number of forms" :reader-exception "#?(:cljs :a :clj)" opts
+         #"read-cond-splicing must implement" :reader-exception "#?@(:clj :a)" opts
+         #"is reserved" :reader-exception "#?@(:foo :a :else :b)" opts
+         #"must be a list" :runtime-exception "#?[:foo :a :else :b]" opts
+         #"Conditional read not allowed" :runtime-exception "#?[:clj :a :default nil]" {:read-cond :BOGUS}
+         #"Conditional read not allowed" :runtime-exception "#?[:clj :a :default nil]" {}))
   (binding [*data-readers* {'js (fn [v] (JSValue. v) )}]
     (is (= (JSValue. [1 2 3])
            (read-string {:features #{:cljs} :read-cond :allow} "#?(:cljs #js [1 2 3] :foo #foo [1])")))))
+
+(deftest preserve-read-cond
+  (is (= 1 (binding [*data-readers* {'foo (constantly 1)}]
+             (read-string {:read-cond :preserve} "#foo []"))))
+
+  (let [x (read-string {:read-cond :preserve} "#?(:clj foo :cljs bar)")]
+    (is (reader-conditional? x))
+    (is (= x (reader-conditional '(:clj foo :cljs bar) false)))
+    (is (not (:splicing? x)))
+    (is (= :foo (get x :no-such-key :foo)))
+    (is (= (:form x) '(:clj foo :cljs bar))))
+  (let [x (read-string {:read-cond :preserve} "#?@(:clj [foo])" )]
+    (is (reader-conditional? x))
+    (is (= x (reader-conditional '(:clj [foo]) true)))
+    (is (:splicing? x))
+    (is (= :foo (get x :no-such-key :foo)))
+    (is (= (:form x) '(:clj [foo]))))
+  (is (thrown-with-msg? js/Error #"No reader function for tag"
+                        (read-string {:read-cond :preserve} "#js {:x 1 :y 2}" )))
+  (let [x (read-string {:read-cond :preserve} "#?(:cljs #js {:x 1 :y 2})")
+        [platform tl] (:form x)]
+    (is (reader-conditional? x))
+    (is (tagged-literal? tl))
+    (is (= tl (tagged-literal 'js {:x 1 :y 2})))
+    (is (= 'js (:tag tl)))
+    (is (= {:x 1 :y 2} (:form tl)))
+    (is (= :foo (get tl :no-such-key :foo))))
+  (testing "print form roundtrips"
+    (doseq [s ["#?(:clj foo :cljs bar)"
+               "#?(:cljs #js {:x 1, :y 2})"
+               "#?(:clj #clojure.test_clojure.reader.TestRecord [42 85])"]]
+      (is (= s (pr-str (read-string {:read-cond :preserve} s)))))))
 
 (enable-console-print!)
 (run-tests)

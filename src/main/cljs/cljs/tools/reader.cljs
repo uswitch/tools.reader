@@ -514,6 +514,12 @@
   [form splicing?]
   (->ReaderConditional form splicing?))
 
+(extend-protocol IPrintWithWriter
+  ReaderConditional
+  (-pr-writer [coll writer opts]
+    (let [start (if (:splicing? coll) "#?@(" "#?(")]
+      (pr-sequential-writer writer pr-writer start " " ")" opts (:form coll)))))
+
 (defn- read-cond
   [rdr _ opts pending-forms]
   (when (not (and opts (#{:allow :preserve} (:read-cond opts))))
