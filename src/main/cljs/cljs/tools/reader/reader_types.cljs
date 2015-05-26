@@ -53,6 +53,22 @@
     (when (> s-len s-pos)
       (nth s s-pos))))
 
+(deftype NodeReadableReader [readable ^:unsynchronized-mutable buf]
+  Reader
+  (read-char [reader]
+    (if buf
+      (let [c (aget buf 0)]
+        (set! buf nil)
+        (char c))
+      (let [c (str (.read readable 1))]
+        (when c
+          (char c)))))
+  (peek-char [reader]
+    (when-not buf
+      (set! buf (str (.read readable 1))))
+    (when buf
+      (char (aget buf 0)))))
+
 (deftype PushbackReader
     [rdr buf buf-len ^:unsynchronized-mutable buf-pos]
   Reader
@@ -206,6 +222,9 @@ logging frames. Called when pushing a character back."
      (string-push-back-reader s 1))
   ([s buf-len]
      (PushbackReader. (string-reader s) (object-array buf-len) buf-len buf-len)))
+
+(defn node-readable-push-back-reader [readable]
+  (PushbackReader. (NodeReadableReader. readable nil) (object-array 1) 1 1))
 
 (defn indexing-push-back-reader
   "Creates an IndexingPushbackReader from a given string or PushbackReader"
