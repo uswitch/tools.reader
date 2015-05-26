@@ -18,14 +18,12 @@
      get-line-number get-column-number get-file-name
      string-push-back-reader log-source]]
    [cljs.tools.reader.impl.utils :refer
-    [char ex-info? whitespace? numeric? desugar-meta next-id thread-bound?]]
+    [char ex-info? whitespace? numeric? desugar-meta next-id unbound?]]
    [cljs.tools.reader.impl.commons :refer
     [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
    [clojure.string :as string]
-   [goog.array :as ga]
-   [goog.string :as gs])
-  (:import
-   [goog.string StringBuffer]))
+   [goog.array]
+   [goog.string]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; helpers
@@ -90,7 +88,7 @@
   [rdr initch]
   (if-not initch
     (reader-error rdr "EOF while reading")
-    (loop [sb (StringBuffer.) ch initch]
+    (loop [sb (goog.string.StringBuffer.) ch initch]
       (if (or (whitespace? ch)
               (macro-terminating? ch)
               (nil? ch))
@@ -119,7 +117,7 @@
 
 (defn read-regex
   [rdr ch opts pending-forms]
-  (let [sb (StringBuffer.)]
+  (let [sb (goog.string.StringBuffer.)]
     (loop [ch (read-char rdr)]
       (if (identical? \" ch)
         (re-pattern (str sb))
@@ -204,7 +202,7 @@
           (= token "formfeed") \formfeed
           (= token "return") \return
 
-          (gs/startsWith token "u")
+          (goog.string/startsWith token "u")
           (let [c (read-unicode-char token 1 4 16)
                 ic (.charCodeAt c 0)]
             (if (and (> ic upper-limit)
@@ -212,7 +210,7 @@
               (reader-error rdr "Invalid character constant: \\u" c)
               c))
 
-          (gs/startsWith token "o")
+          (goog.string/startsWith token "o")
           (let [len (dec token-len)]
             (if (> len 3)
               (reader-error rdr "Invalid octal escape sequence length: " len)
@@ -310,7 +308,7 @@
 
 (defn- read-number
   [rdr initch]
-  (loop [sb (doto (StringBuffer.) (.append initch))
+  (loop [sb (doto (goog.string.StringBuffer.) (.append initch))
          ch (read-char rdr)]
     (if (or (whitespace? ch) (macros ch) (nil? ch))
       (let [s (str sb)]
@@ -342,7 +340,7 @@
 
 (defn- read-string*
   [reader _ opts pending-forms]
-  (loop [sb (StringBuffer.)
+  (loop [sb (goog.string.StringBuffer.)
          ch (read-char reader)]
     (case ch
       nil (reader-error reader "EOF while reading string")
@@ -531,7 +529,7 @@
         (do
           (if (satisfies? ISequential result)
            (do
-             (ga/insertArrayAt pending-forms (to-array result) 0)
+             (goog.array/insertArrayAt pending-forms (to-array result) 0)
              rdr)
            (reader-error rdr "Spliced form list in read-cond-splicing must implement java.util.List.")))
         result))))
@@ -566,7 +564,7 @@
 
 (defn- read-fn
   [rdr _ opts pending-forms]
-  (if (thread-bound? #'arg-env)
+  (if (unbound? #'arg-env)
     (throw (ex-info "Nested #()s are not allowed" {:type :illegal-state})))
   (binding [arg-env (sorted-map)]
     (let [form (read* (doto rdr (unread \()) true nil opts pending-forms) ;; this sets bindings
@@ -588,7 +586,7 @@
 (defn- register-arg
   "Registers an argument to the arg-env"
   [n]
-  (if (thread-bound? #'arg-env)
+  (if (unbound? #'arg-env)
     (if-let [ret (arg-env n)]
       ret
       (let [g (garg n)]
@@ -601,7 +599,7 @@
 
 (defn- read-arg
   [rdr pct opts pending-forms]
-  (if-not (thread-bound? #'arg-env)
+  (if-not (unbound? #'arg-env)
     (read-symbol rdr pct)
     (let [ch (peek-char rdr)]
       (cond
@@ -726,13 +724,13 @@
              (->UnresolvedSymbol (symbol (namespace form)) (symbol (name form)))
              (let [sym (name form)]
                (cond
-                 (gs/endsWith sym "#")
+                 (goog.string/endsWith sym "#")
                  (register-gensym form)
 
-                 (gs/startsWith sym ".")
+                 (goog.string/startsWith sym ".")
                  form
 
-                 (gs/endsWith sym ".")
+                 (goog.string/endsWith sym ".")
                  (->UnresolvedSymbol nil sym)
 
                  :else (->UnresolvedSymbol nil form)))))
@@ -904,7 +902,7 @@
           (fn []
             (if (seq pending-forms)
               (let [form (first pending-forms)]
-                 (ga/removeAt pending-forms 0)
+                 (goog.array/removeAt pending-forms 0)
                  form)
               (let [ch (read-char reader)]
                 (cond

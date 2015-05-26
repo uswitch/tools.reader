@@ -30,14 +30,12 @@
                           get-line-number get-column-number get-file-name
                           string-push-back-reader log-source]]
                         [cljs.tools.reader.impl.utils :refer
-                         [char ex-info? whitespace? numeric? desugar-meta next-id thread-bound?]]
+                         [char ex-info? whitespace? numeric? desugar-meta next-id unbound?]]
                         [cljs.tools.reader.impl.commons :refer
                          [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
                         [clojure.string :as string]
-                        [goog.array :as ga]
-                        [goog.string :as gs])
-                       (:import
-                        [goog.string StringBuffer]))))
+                        [goog.array]
+                        [goog.string]))))
              (let [form (read source-logging-reader false nil)]
                (is (= form
                       '(declare read* macros dispatch-macros
@@ -47,9 +45,9 @@
                (is (= (meta (second form))
                       {:source "^:private read*"
                        :file "/Users/Andrew.Mcveigh/Projects/tools.reader/src/main/cljs/cljs/tools/reader.cljs"
-                       :line 34
+                       :line 32
                        :column 20
-                       :end-line 34
+                       :end-line 32
                        :end-column 25
                        :private true})))
              (is (= (read source-logging-reader false nil)

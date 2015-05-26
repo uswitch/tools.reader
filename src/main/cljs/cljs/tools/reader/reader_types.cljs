@@ -11,9 +11,8 @@
   cljs.tools.reader.reader-types
   (:refer-clojure :exclude [char read-line])
   (:require
-   [cljs.tools.reader.impl.utils :refer [char whitespace? newline?]])
-  (:import
-   [goog.string StringBuffer]))
+   [cljs.tools.reader.impl.utils :refer [char whitespace? newline?]]
+   [goog.string]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reader protocols
@@ -251,12 +250,12 @@ logging frames. Called when pushing a character back."
       nil
       0
       file-name
-      (atom {:buffer (StringBuffer.) :offset 0}))))
+      (atom {:buffer (goog.string.StringBuffer.) :offset 0}))))
 
 (defn read-line
   "Reads a line from the reader or from *in* if no reader is specified"
   ([rdr]
-   (loop [c (read-char rdr) s (StringBuffer.)]
+   (loop [c (read-char rdr) s (goog.string.StringBuffer.)]
      (if (newline? c)
        (str s)
        (recur (read-char rdr) (.append s c))))))

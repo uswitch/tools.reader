@@ -9,7 +9,7 @@
 (ns cljs.tools.reader.impl.utils
     (:refer-clojure :exclude [char])
     (:require [clojure.string :as string]
-              [goog.string :as gstring]))
+              [goog.string]))
 
 (defn char [x]
   (when x
@@ -18,14 +18,12 @@
 (defn ex-info? [ex]
   (instance? cljs.core.ExceptionInfo ex))
 
-(defn thread-bound?
-  "Checks that the vars are unbound, as we don't have threads"
+(defn unbound?
+  "Checks that all vars are not bound"
   [& vars]
   (not-any? #(undefined? (deref %)) vars))
 
 (defrecord ReaderConditional [splicing? form])
-;; (ns-unmap *ns* '->ReaderConditional)
-;; (ns-unmap *ns* 'map->ReaderConditional)
 
 (defn reader-conditional?
   "Return true if the value is the data representation of a reader conditional"
@@ -71,7 +69,7 @@
   "Checks whether a given character is numeric"
   [ch]
   (when ch
-    (gstring/isNumeric ch)))
+    (goog.string/isNumeric ch)))
 
 (defn newline?
   "Checks whether the character is a newline"

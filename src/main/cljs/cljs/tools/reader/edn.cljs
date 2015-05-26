@@ -19,8 +19,7 @@
    [cljs.tools.reader.impl.commons :refer
     [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
    [cljs.tools.reader :refer [default-data-readers map-func]]
-   [goog.string :as gs])
-  (:import [goog.string StringBuffer]))
+   [goog.string]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; helpers
@@ -52,7 +51,7 @@
       (reader-error rdr "Invalid leading character: " initch)
 
       :else
-      (loop [sb (StringBuffer.)
+      (loop [sb (goog.string.StringBuffer.)
              ch (do (unread rdr initch) initch)]
         (if (or (whitespace? ch)
                 (macro-terminating? ch)
@@ -143,7 +142,7 @@
          (= token "formfeed") \formfeed
          (= token "return") \return
 
-         (gs/startsWith token "u")
+         (goog.string/startsWith token "u")
          (let [c (read-unicode-char token 1 4 16)
                ic (int c)]
            (if (and (> ic upper-limit)
@@ -151,7 +150,7 @@
              (reader-error rdr "Invalid character constant: \\u" (.toString ic 16))
              c))
 
-         (gs/startsWith token "o")
+         (goog.string/startsWith token "o")
          (let [len (dec token-len)]
            (if (> len 3)
              (reader-error rdr "Invalid octal escape sequence length: " len)
@@ -202,7 +201,7 @@
 
 (defn- read-number
   [reader initch opts]
-  (loop [sb (doto (StringBuffer.) (.append initch))
+  (loop [sb (doto (goog.string.StringBuffer.) (.append initch))
          ch (read-char reader)]
     (if (or (whitespace? ch) (macros ch) (nil? ch))
       (let [s (str sb)]
@@ -234,7 +233,7 @@
 
 (defn- read-string*
   [reader _ opts]
-  (loop [sb (StringBuffer.)
+  (loop [sb (goog.string.StringBuffer.)
          ch (read-char reader)]
     (case ch
       nil (reader-error reader "EOF while reading string")
