@@ -18,7 +18,7 @@
     [char ex-info? whitespace? numeric? desugar-meta]]
    [cljs.tools.reader.impl.commons :refer
     [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
-   [cljs.tools.reader :refer [default-data-readers map-func]]
+   [cljs.tools.reader :refer [default-data-readers char-code]]
    [goog.string]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -83,40 +83,40 @@
 
 (defn- read-unicode-char
   ([token offset length base]
-     (let [l (+ offset length)]
-       (when-not (== (count token) l)
-         (throw (ex-info (str "Invalid unicode character: \\" token)
-                         {:type :illegal-argument})))
-       (loop [i offset uc 0]
-         (if (== i l)
-           (char uc)
-           (let [d (js/parseInt (int (nth token i)) (int base))]
-             (if (== d -1)
-               (throw (ex-info (str "Invalid digit: " (nth token i))
-                               {:type :illegal-argument}))
-               (recur (inc i) (long (+ d (* uc base))))))))))
+   (let [l (+ offset length)]
+     (when-not (== (count token) l)
+       (throw (ex-info (str "Invalid unicode character: \\" token)
+                       {:type :illegal-argument})))
+     (loop [i offset uc 0]
+       (if (== i l)
+         (js/String.fromCharCode uc)
+         (let [d (char-code (nth token i) base)]
+           (if (== d -1)
+             (throw (ex-info (str "Invalid digit: " (nth token i))
+                             {:type :illegal-argument}))
+             (recur (inc i) (+ d (* uc base)))))))))
 
   ([rdr initch base length exact?]
-     (loop [i 1 uc (js/parseInt (int initch) (int base))]
-       (if (== uc -1)
-         (throw (ex-info (str "Invalid digit: " initch)
-                         {:type :illegal-argument}))
-         (if-not (== i length)
-           (let [ch (peek-char rdr)]
-             (if (or (whitespace? ch)
-                     (macros ch)
-                     (nil? ch))
-               (if exact?
-                 (throw (ex-info (str "Invalid character length: " i ", should be: " length)
+   (loop [i 1 uc (char-code initch base)]
+     (if (== uc -1)
+       (throw (ex-info (str "Invalid digit: " initch)
+                       {:type :illegal-argument}))
+       (if-not (== i length)
+         (let [ch (peek-char rdr)]
+           (if (or (whitespace? ch)
+                   (macros ch)
+                   (nil? ch))
+             (if exact?
+               (throw (ex-info (str "Invalid character length: " i ", should be: " length)
+                               {:type :illegal-argument}))
+               (js/String.fromCharCode uc))
+             (let [d (char-code ch base)]
+               (read-char rdr)
+               (if (== d -1)
+                 (throw (ex-info (str "Invalid digit: " ch)
                                  {:type :illegal-argument}))
-                 (char uc))
-               (let [d (js/parseInt (int ch) (int base))]
-                 (read-char rdr)
-                 (if (== d -1)
-                   (throw (ex-info (str "Invalid digit: " ch)
-                                   {:type :illegal-argument}))
-                   (recur (inc i) (long (+ d (* uc base))))))))
-           (char uc))))))
+                 (recur (inc i) (+ d (* uc base)))))))
+         (js/String.fromCharCode uc))))))
 
 (def ^:private ^:const upper-limit (int \uD7ff))
 (def ^:private ^:const lower-limit (int \uE000))
@@ -197,7 +197,7 @@
   (let [l (to-array (read-delimited \} rdr opts))]
     (when (== 1 (bit-and (alength l) 1))
       (reader-error rdr "Map literal must contain an even number of forms"))
-    (apply map-func l)))
+    (apply hash-map l)))
 
 (defn- read-number
   [reader initch opts]
