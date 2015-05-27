@@ -4,8 +4,8 @@
     [cljs.test :as t :refer-macros [are deftest is run-tests testing]]
     [cljs.tools.reader :as reader :refer
      [*data-readers* read-string ->UnresolvedKeyword
-      ->UnresolvedSymbol ->SyntaxQuotedForm ->ReadRecord
-      reader-conditional reader-conditional?]]
+      ->UnresolvedSymbol ->SyntaxQuotedForm ->ReadRecord]]
+    [cljs.tools.reader.impl.utils :refer [reader-conditional reader-conditional?]]
     [cljs.tools.reader.reader-types :as rt]))
 
 ;;==============================================================================

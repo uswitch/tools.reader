@@ -45,7 +45,7 @@
                           " "
                           ")"
                           opts
-                          coll)))
+                          (:form coll))))
 
 (defn whitespace?
   "Checks whether a given character is whitespace"

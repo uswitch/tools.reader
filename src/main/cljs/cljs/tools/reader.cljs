@@ -18,7 +18,8 @@
      get-line-number get-column-number get-file-name
      string-push-back-reader log-source]]
    [cljs.tools.reader.impl.utils :refer
-    [char ex-info? whitespace? numeric? desugar-meta next-id unbound?]]
+    [char ex-info? whitespace? numeric? desugar-meta next-id unbound?
+     ReaderConditional reader-conditional reader-conditional?]]
    [cljs.tools.reader.impl.commons :refer
     [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
    [clojure.string :as string]
@@ -43,27 +44,7 @@
 
 (defrecord ReadRecord [ns name form values])
 
-(defrecord ReaderConditional [form splicing?])
-
-(defn reader-conditional?
-  "Return true if the value is the data representation of a reader conditional"
-  {:added "1.7"}
-  [value]
-  (instance? ReaderConditional value))
-
-(defn reader-conditional
-  "Construct a data representation of a reader conditional.
-  If true, splicing? indicates read-cond-splicing."
-  {:added "1.7"}
-  [form splicing?]
-  (->ReaderConditional form splicing?))
-
 (extend-protocol IPrintWithWriter
-  ReaderConditional
-  (-pr-writer [coll writer opts]
-    (let [start (if (:splicing? coll) "#?@(" "#?(")]
-      (pr-sequential-writer writer pr-writer start " " ")" opts (:form coll))))
-
   ReadRecord
   (-pr-writer [coll writer opts]
     (let [{:keys [ns name form values]} coll
@@ -224,11 +205,11 @@
           :else (reader-error rdr "Unsupported character: \\" token)))
       (reader-error rdr "EOF while reading character"))))
 
-(defn ^:private starting-line-col-info [rdr]
+(defn- starting-line-col-info [rdr]
   (when (indexing-reader? rdr)
     [(get-line-number rdr) (int (dec (get-column-number rdr)))]))
 
-(defn ^:private ending-line-col-info [rdr]
+(defn- ending-line-col-info [rdr]
   (when (indexing-reader? rdr)
     [(get-line-number rdr) (get-column-number rdr)]))
 
@@ -890,7 +871,7 @@
   May be overridden by binding *data-readers*"
   {})
 
-(defn ^:private read*
+(defn- read*
   ([reader eof-error? sentinel opts pending-forms]
    (read* reader eof-error? sentinel nil opts pending-forms))
   ([reader eof-error? sentinel return-on opts pending-forms]

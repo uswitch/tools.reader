@@ -30,7 +30,8 @@
                           get-line-number get-column-number get-file-name
                           string-push-back-reader log-source]]
                         [cljs.tools.reader.impl.utils :refer
-                         [char ex-info? whitespace? numeric? desugar-meta next-id unbound?]]
+                         [char ex-info? whitespace? numeric? desugar-meta next-id unbound?
+                          ReaderConditional reader-conditional reader-conditional?]]
                         [cljs.tools.reader.impl.commons :refer
                          [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
                         [clojure.string :as string]
@@ -45,9 +46,9 @@
                (is (= (meta (second form))
                       {:source "^:private read*"
                        :file "/Users/Andrew.Mcveigh/Projects/tools.reader/src/main/cljs/cljs/tools/reader.cljs"
-                       :line 32
+                       :line 33
                        :column 20
-                       :end-line 32
+                       :end-line 33
                        :end-column 25
                        :private true})))
              (is (= (read source-logging-reader false nil)
