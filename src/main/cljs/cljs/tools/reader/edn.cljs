@@ -144,10 +144,10 @@
 
          (goog.string/startsWith token "u")
          (let [c (read-unicode-char token 1 4 16)
-               ic (int c)]
+               ic (.charCodeAt c)]
            (if (and (> ic upper-limit)
                     (< ic lower-limit))
-             (reader-error rdr "Invalid character constant: \\u" (.toString ic 16))
+             (reader-error rdr "Invalid character constant: \\u" c)
              c))
 
          (goog.string/startsWith token "o")
@@ -286,7 +286,7 @@
     (when-not (map? m)
       (reader-error rdr "Metadata must be Symbol, Keyword, String or Map"))
     (let [o (read rdr true nil opts)]
-      (if (instance? IMeta o)
+      (if (satisfies? IMeta o)
         (with-meta o (merge (meta o) m))
         (reader-error rdr "Metadata can only be applied to IMetas")))))
 
