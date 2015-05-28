@@ -11,7 +11,7 @@
   cljs.tools.reader
   (:refer-clojure :exclude [read read-line read-string char
                             default-data-readers *default-data-reader-fn*
-                            *read-eval* *data-readers* *suppress-read*])
+                            *data-readers* *suppress-read*])
   (:require
    [cljs.tools.reader.reader-types :refer
     [read-char reader-error unread peek-char indexing-reader?
@@ -32,7 +32,6 @@
 
 (declare ^:private read*
          macros dispatch-macros
-         ^:dynamic *read-eval*
          ^:dynamic *data-readers*
          ^:dynamic *default-data-reader-fn*
          ^:dynamic *suppress-read*
@@ -589,15 +588,6 @@
                             {:type :illegal-state}))
             (register-arg n)))))))
 
-(defn- read-eval
-  "Evaluate a reader literal"
-  [rdr _ opts pending-forms]
-  (when-not *read-eval*
-    (reader-error rdr "#= not allowed when *read-eval* is false"))
-  ;;(eval (read* rdr true nil opts pending-forms))
-  nil ;; there is no eval in cljs
-  )
-
 (def ^:private ^:dynamic gensym-env nil)
 
 (defn- read-unquote
@@ -756,7 +746,6 @@
     \^ read-meta                ;deprecated
     \' (wrapping-reader 'var)
     \( read-fn
-    \= read-eval
     \{ read-set
     \< (throwing-reader "Unreadable form")
     \" read-regex
@@ -808,24 +797,6 @@
 ;; Public API
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def ^:dynamic *read-eval*
-  "Defaults to true.
-
-   ***WARNING***
-   This setting implies that the full power of the reader is in play,
-   including syntax that can cause code to execute. It should never be
-   used with untrusted sources. See also: clojure.tools.reader.edn/read.
-
-   When set to logical false in the thread-local binding,
-   the eval reader (#=) and *record/type literal syntax* are disabled in read/load.
-   Example (will fail): (binding [*read-eval* false] (read-string \"#=(* 2 21)\"))
-
-   When set to :unknown all reads will fail in contexts where *read-eval*
-   has not been explicitly bound to either true or false. This setting
-   can be a useful diagnostic tool to ensure that all of your reads
-   occur in considered contexts."
-  true)
-
 (def ^:dynamic *data-readers*
   "Map from reader tag symbols to data reader Vars.
   Reader tags without namespace qualifiers are reserved for Clojure.
@@ -851,8 +822,6 @@
   ([reader eof-error? sentinel opts pending-forms]
    (read* reader eof-error? sentinel nil opts pending-forms))
   ([reader eof-error? sentinel return-on opts pending-forms]
-   (when (= :unknown *read-eval*)
-     (reader-error "Reading disallowed - *read-eval* bound to :unknown"))
    (try
      ((fn target []
         (log-source reader
@@ -907,10 +876,6 @@
     :eof - on eof, return value unless :eofthrow, then throw.
            if not specified, will throw
 
-   ***WARNING***
-   Note that read can execute code (controlled by *read-eval*),
-   and as such should be used only with trusted sources.
-
    To read data structures only, use clojure.tools.reader.edn/read
 
    Note that the function signature of clojure.tools.reader/read and
@@ -924,10 +889,6 @@
 (defn read-string
   "Reads one object from the string s.
    Returns nil when s is nil or empty.
-
-   ***WARNING***
-   Note that read-string can execute code (controlled by *read-eval*),
-   and as such should be used only with trusted sources.
 
    To read data structures only, use clojure.tools.reader.edn/read-string
 
