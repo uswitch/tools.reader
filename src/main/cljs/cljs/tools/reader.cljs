@@ -39,7 +39,6 @@
          default-data-readers)
 
 (defrecord UnresolvedSymbol [namespace name])
-(defrecord SyntaxQuotedForm [form])
 
 (defrecord ReadRecord [ns name form values])
 
@@ -663,13 +662,9 @@
     ret))
 
 (defn- syntax-quote-coll [type coll]
-  ;; We use sequence rather than seq here to fix http://dev.clojure.org/jira/browse/CLJ-1444
-  ;; But because of http://dev.clojure.org/jira/browse/CLJ-1586 we still need to call seq on the form
-  (let [res (->SyntaxQuotedForm
-             (list 'cljs.core/sequence
-                   (list 'cljs.core/seq
-                         (cons 'cljs.core/concat
-                               (expand-list coll)))))]
+  (let [res (list 'cljs.core/sequence
+                  (cons 'cljs.core/concat
+                        (expand-list coll)))]
     (if type
       (list 'cljs.core/apply type res)
       res)))
