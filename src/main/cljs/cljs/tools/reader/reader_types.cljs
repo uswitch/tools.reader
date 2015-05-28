@@ -146,27 +146,26 @@ metadata merged over `m`."
 (defn- peek-source-log
   "Returns a string containing the contents of the top most source
 logging frame."
-  [source-log-frames]
-  (let [current-frame source-log-frames]
-    (subs (str (:buffer current-frame)) (:offset current-frame))))
+  [frames]
+  (subs (str (:buffer frames)) (first (:offset frames))))
 
 (defn- log-source-char
   "Logs `char` to all currently active source logging frames."
-  [source-log-frames char]
-  (when-let [buffer (:buffer @source-log-frames)]
+  [frames char]
+  (when-let [buffer (:buffer frames)]
     (.append buffer char)))
 
 (defn- drop-last-logged-char
   "Removes the last logged character from all currently active source
 logging frames. Called when pushing a character back."
-  [source-log-frames]
-  (when-let [buffer (:buffer @source-log-frames)]
+  [frames]
+  (when-let [buffer (:buffer frames)]
     (.set buffer (subs (str buffer) 0 (dec (.getLength buffer))))))
 
 (deftype SourceLoggingPushbackReader
     [rdr ^:unsynchronized-mutable line ^:unsynchronized-mutable column
      ^:unsynchronized-mutable line-start? ^:unsynchronized-mutable prev
-     ^:unsynchronized-mutable prev-column file-name source-log-frames]
+     ^:unsynchronized-mutable prev-column file-name frames]
   Reader
   (read-char [reader]
     (when-let [ch (read-char rdr)]
@@ -178,7 +177,7 @@ logging frames. Called when pushing a character back."
           (set! column 0)
           (set! line (inc line)))
         (set! column (inc column))
-        (log-source-char source-log-frames ch)
+        (log-source-char @frames ch)
         ch)))
 
   (peek-char [reader]
@@ -192,7 +191,7 @@ logging frames. Called when pushing a character back."
       (set! column (dec column)))
     (set! line-start? prev)
     (when ch
-      (drop-last-logged-char source-log-frames))
+      (drop-last-logged-char @frames))
     (unread rdr ch))
 
   IndexingReader
@@ -250,7 +249,7 @@ logging frames. Called when pushing a character back."
       nil
       0
       file-name
-      (atom {:buffer (goog.string.StringBuffer.) :offset 0}))))
+      (atom {:buffer (goog.string.StringBuffer.) :offset '(0)}))))
 
 (defn read-line
   "Reads a line from the reader or from *in* if no reader is specified"
@@ -285,20 +284,21 @@ logging frames. Called when pushing a character back."
 
 (defn log-source*
   [reader f]
-  (let [frame (.-source-log-frames reader)
-        buffer (:buffer @frame)
-        new-frame (assoc-in @frame [:offset] (.getLength buffer))]
-    (let [frame new-frame]
+  (let [buffer (:buffer @(.-frames reader))]
+    (try
+      (swap! (.-frames reader) update-in [:offset] conj (.getLength buffer))
       (let [ret (f)]
         (if (satisfies? IMeta ret)
-          (merge-meta ret {:source (peek-source-log frame)})
-          ret)))))
+          (merge-meta ret {:source (peek-source-log @ (.-frames reader))})
+          ret))
+      (finally
+        (swap! (.-frames reader) update-in [:offset] rest)))))
 
 (defn log-source
   "If reader is a SourceLoggingPushbackReader, execute body in a source
   logging context. Otherwise, execute body, returning the result."
   [reader body-fn]
-  (if (and (cljs.tools.reader.reader-types/source-logging-reader? reader)
-           (not (cljs.tools.reader.impl.utils/whitespace? (peek-char reader))))
+  (if (and (source-logging-reader? reader)
+           (not (whitespace? (peek-char reader))))
     (log-source* reader body-fn)
     (body-fn)))
