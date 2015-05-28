@@ -34,13 +34,14 @@
 (extend-protocol IPrintWithWriter
   ReaderConditional
   (-pr-writer [coll writer opts]
-    (pr-sequential-writer writer
-                          pr-writer ; this is private in cljs.core?
-                          (str "#?" (when (:splicing? coll) "@") "(")
-                          " "
-                          ")"
-                          opts
-                          (:form coll))))
+    (-write writer (str "#?" (when (:splicing? coll) "@")))
+    (pr-writer (:form coll) writer opts)))
+
+(extend-protocol IPrintWithWriter
+  cljs.core.TaggedLiteral
+  (-pr-writer [o writer opts]
+    (-write writer (str "#" (:tag o) " "))
+    (pr-writer (:form o) writer opts)))
 
 (defn whitespace?
   "Checks whether a given character is whitespace"
