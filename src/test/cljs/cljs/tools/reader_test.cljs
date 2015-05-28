@@ -3,8 +3,7 @@
   (:require
     [cljs.test :as t :refer-macros [are deftest is run-tests testing]]
     [cljs.tools.reader :as reader :refer
-     [*data-readers* read-string ->UnresolvedKeyword
-      ->UnresolvedSymbol ->SyntaxQuotedForm ->ReadRecord]]
+     [*data-readers* read-string]]
     [cljs.tools.reader.impl.utils :refer [reader-conditional reader-conditional?]]
     [cljs.tools.reader.reader-types :as rt]))
 
@@ -150,8 +149,6 @@
 (deftest read-keyword
   (is (= :foo-bar (read-string ":foo-bar")))
   (is (= :foo/bar (read-string ":foo/bar")))
-  (is (= (->UnresolvedKeyword nil "foo-bar") (read-string "::foo-bar")))
-  (is (= (->UnresolvedKeyword "core" "foo-bar") (read-string "::core/foo-bar")))
   (is (= :*+!-_? (read-string ":*+!-_?")))
   (is (= :abc:def:ghi (read-string ":abc:def:ghi")))
   (is (= :abc.def/ghi (read-string ":abc.def/ghi")))
@@ -169,15 +166,15 @@
 (deftest read-syntax-quote
   (let [q (read-string "quote")]
     (is (= q (first (read-string "`foo"))))
-    (is (= (->UnresolvedSymbol nil 'foo) (second (read-string "`foo"))))
+    (is (= 'foo (second (read-string "`foo"))))
 
     ;; (is (= () (eval (read-string "`(~@[])")))) ;;; no-eval
 
     (is (= q (first (read-string "`+"))))
-    (is (= (->UnresolvedSymbol nil '+) (second (read-string "`+"))))
+    (is (= '+ (second (read-string "`+"))))
 
     (is (= q (first (read-string "`foo/bar"))))
-    (is (= (->UnresolvedSymbol 'foo 'bar) (second (read-string "`foo/bar"))))
+    (is (= 'foo/bar (second (read-string "`foo/bar"))))
 
     (is (= 1 (read-string "`1"))))
   ;;;(is (= `(1 (~2 ~@'(3))) (eval (read-string "`(1 (~2 ~@'(3)))")))) ;;; no eval
@@ -222,20 +219,20 @@
 (defrecord bar [baz buz])
 
 (deftest read-record
-  (is (= (->ReadRecord "cljs.tools.reader_test" "foo" :short [])
+  (is (= (foo.)
          (read-string "#cljs.tools.reader_test.foo[]")))
-  (is (= (->ReadRecord "cljs.tools.reader_test" "foo" :short [])
+  (is (= (foo.)
          (read-string "#cljs.tools.reader_test.foo []"))) ;; not valid in clojure
-  (is (= (->ReadRecord "cljs.tools.reader_test" "foo" :extended {})
+  (is (= (foo.)
          (read-string "#cljs.tools.reader_test.foo{}")))
-  (is (= (->ReadRecord "cljs.tools.reader_test" "foo" :extended {:foo 'bar})
+  (is (= (assoc (foo.) :foo 'bar)
          (read-string "#cljs.tools.reader_test.foo{:foo bar}")))
 
-  (is (= (->ReadRecord "cljs.tools.reader_test" "bar" :extended {:baz 1})
+  (is (= (map->bar {:baz 1})
          (read-string "#cljs.tools.reader_test.bar{:baz 1}")))
-  (is (= (->ReadRecord "cljs.tools.reader_test" "bar" :short [1 nil])
+  (is (= (bar. 1 nil)
          (read-string "#cljs.tools.reader_test.bar[1 nil]")))
-  (is (= (->ReadRecord "cljs.tools.reader_test" "bar" :short [1 2])
+  (is (= (bar. 1 2)
          (read-string "#cljs.tools.reader_test.bar[1 2]"))))
 
 (deftest source-logging-meta-test

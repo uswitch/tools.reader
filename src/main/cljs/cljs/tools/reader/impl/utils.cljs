@@ -18,11 +18,6 @@
 (defn ex-info? [ex]
   (instance? cljs.core.ExceptionInfo ex))
 
-(defn unbound?
-  "Checks that all vars are not bound"
-  [& vars]
-  (not-any? #(undefined? (deref %)) vars))
-
 (defrecord ReaderConditional [splicing? form])
 
 (defn reader-conditional?
@@ -39,13 +34,14 @@
 (extend-protocol IPrintWithWriter
   ReaderConditional
   (-pr-writer [coll writer opts]
-    (pr-sequential-writer writer
-                          pr-writer ; this is private in cljs.core?
-                          (str "#?" (when (:splicing? coll) "@") "(")
-                          " "
-                          ")"
-                          opts
-                          (:form coll))))
+    (-write writer (str "#?" (when (:splicing? coll) "@")))
+    (pr-writer (:form coll) writer opts)))
+
+(extend-protocol IPrintWithWriter
+  cljs.core.TaggedLiteral
+  (-pr-writer [o writer opts]
+    (-write writer (str "#" (:tag o) " "))
+    (pr-writer (:form o) writer opts)))
 
 (defn whitespace?
   "Checks whether a given character is whitespace"
@@ -92,3 +88,34 @@
 (defn next-id
   []
   (swap! last-id inc))
+
+(let [patterns {"-", "_",
+                ":", "_COLON_",
+                "+", "_PLUS_",
+                ">", "_GT_",
+                "<", "_LT_",
+                "=", "_EQ_",
+                "~", "_TILDE_",
+                "!", "_BANG_",
+                "@", "_CIRCA_",
+                "#", "_SHARP_",
+                "'", "_SINGLEQUOTE_",
+                "\"", "_DOUBLEQUOTE_",
+                "%", "_PERCENT_",
+                "^", "_CARET_",
+                "&", "_AMPERSAND_",
+                "*", "_STAR_",
+                "|", "_BAR_",
+                "{", "_LBRACE_",
+                "}", "_RBRACE_",
+                "[", "_LBRACK_",
+                "]", "_RBRACK_",
+                "/", "_SLASH_",
+                "\\", "_BSLASH_",
+                "?", "_QMARK_"}]
+  (defn munge [s]
+    ((if (symbol? s) symbol str)
+     (loop [[c & s] (str s) ret ""]
+       (if c
+         (recur s (str ret (patterns c c)))
+         ret)))))

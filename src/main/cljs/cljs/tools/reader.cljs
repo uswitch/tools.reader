@@ -11,14 +11,14 @@
   cljs.tools.reader
   (:refer-clojure :exclude [read read-line read-string char
                             default-data-readers *default-data-reader-fn*
-                            *read-eval* *data-readers* *suppress-read*])
+                            *data-readers* *suppress-read*])
   (:require
    [cljs.tools.reader.reader-types :refer
     [read-char reader-error unread peek-char indexing-reader?
      get-line-number get-column-number get-file-name
      string-push-back-reader log-source]]
    [cljs.tools.reader.impl.utils :refer
-    [char ex-info? whitespace? numeric? desugar-meta next-id unbound?
+    [char ex-info? whitespace? numeric? desugar-meta next-id munge
      ReaderConditional reader-conditional reader-conditional?]]
    [cljs.tools.reader.impl.commons :refer
     [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
@@ -32,32 +32,10 @@
 
 (declare ^:private read*
          macros dispatch-macros
-         ^:dynamic *read-eval*
          ^:dynamic *data-readers*
          ^:dynamic *default-data-reader-fn*
          ^:dynamic *suppress-read*
          default-data-readers)
-
-(defrecord UnresolvedKeyword [namespace name])
-(defrecord UnresolvedSymbol [namespace name])
-(defrecord SyntaxQuotedForm [form])
-
-(defrecord ReadRecord [ns name form values])
-
-(extend-protocol IPrintWithWriter
-  ReadRecord
-  (-pr-writer [coll writer opts]
-    (let [{:keys [ns name form values]} coll
-          short? (= :short form)
-          start (str \# ns \. name " [")
-          end \]
-          values (if short? values (vals values))]
-      (pr-sequential-writer writer pr-writer start " " end opts values)))
-
-  TaggedLiteral
-  (-pr-writer [coll writer opts]
-    (-write writer (str \# (:tag coll) \space))
-    (-pr-writer (:form coll) writer opts)))
 
 (defn- macro-terminating? [ch]
   (case ch
@@ -358,27 +336,13 @@
                       :end-column end-column})))))
             (reader-error rdr "Invalid token: " token))))))
 
-(def ^:dynamic *alias-map*
-  "Map from ns alias to ns, if non-nil, it will be used to resolve read-time
-  ns aliases instead of (ns-aliases *ns*).
-
-  Defaults to nil"
-  nil)
-
 (defn- read-keyword
   [reader initch opts pending-forms]
   (let [ch (read-char reader)]
     (if-not (whitespace? ch)
-      (let [token (read-token reader ch)
-            s (parse-symbol token)]
-        (if s
-          (let [ns (s 0)
-                name (s 1)]
-            (if (identical? \: (nth token 0))
-              (if ns
-                (->UnresolvedKeyword (subs ns 1) name)
-                (->UnresolvedKeyword nil (subs name 1)))
-              (keyword ns name)))
+      (let [token (read-token reader ch)]
+        (if-let [[ns name] (parse-symbol token)]
+          (keyword ns name)
           (reader-error reader "Invalid token: :" token)))
       (reader-error reader "Invalid token: :"))))
 
@@ -535,7 +499,7 @@
          (reader-error rdr "EOF while reading character"))))
     (reader-error rdr "EOF while reading character")))
 
-(def ^:private ^:dynamic arg-env)
+(def ^:private ^:dynamic arg-env nil)
 
 (defn- garg
   "Get a symbol for an anonymous ?argument?"
@@ -545,7 +509,7 @@
 
 (defn- read-fn
   [rdr _ opts pending-forms]
-  (if (unbound? #'arg-env)
+  (if arg-env
     (throw (ex-info "Nested #()s are not allowed" {:type :illegal-state})))
   (binding [arg-env (sorted-map)]
     (let [form (read* (doto rdr (unread \()) true nil opts pending-forms) ;; this sets bindings
@@ -567,7 +531,7 @@
 (defn- register-arg
   "Registers an argument to the arg-env"
   [n]
-  (if (unbound? #'arg-env)
+  (if arg-env
     (if-let [ret (arg-env n)]
       ret
       (let [g (garg n)]
@@ -580,7 +544,7 @@
 
 (defn- read-arg
   [rdr pct opts pending-forms]
-  (if-not (unbound? #'arg-env)
+  (if (nil? arg-env)
     (read-symbol rdr pct)
     (let [ch (peek-char rdr)]
       (cond
@@ -599,15 +563,6 @@
             (throw (ex-info "Arg literal must be %, %& or %integer"
                             {:type :illegal-state}))
             (register-arg n)))))))
-
-(defn- read-eval
-  "Evaluate a reader literal"
-  [rdr _ opts pending-forms]
-  (when-not *read-eval*
-    (reader-error rdr "#= not allowed when *read-eval* is false"))
-  ;;(eval (read* rdr true nil opts pending-forms))
-  nil ;; there is no eval in cljs
-  )
 
 (def ^:private ^:dynamic gensym-env nil)
 
@@ -671,13 +626,9 @@
     ret))
 
 (defn- syntax-quote-coll [type coll]
-  ;; We use sequence rather than seq here to fix http://dev.clojure.org/jira/browse/CLJ-1444
-  ;; But because of http://dev.clojure.org/jira/browse/CLJ-1586 we still need to call seq on the form
-  (let [res (->SyntaxQuotedForm
-             (list 'cljs.core/sequence
-                   (list 'cljs.core/seq
-                         (cons 'cljs.core/concat
-                               (expand-list coll)))))]
+  (let [res (list 'cljs.core/sequence
+                  (cons 'cljs.core/concat
+                        (expand-list coll)))]
     (if type
       (list 'cljs.core/apply type res)
       res)))
@@ -702,19 +653,10 @@
      (symbol? form)
      (list 'quote
            (if (namespace form)
-             (->UnresolvedSymbol (symbol (namespace form)) (symbol (name form)))
-             (let [sym (name form)]
-               (cond
-                 (goog.string/endsWith sym "#")
-                 (register-gensym form)
-
-                 (goog.string/startsWith sym ".")
-                 form
-
-                 (goog.string/endsWith sym ".")
-                 (->UnresolvedSymbol nil sym)
-
-                 :else (->UnresolvedSymbol nil form)))))
+             form
+             (if (goog.string/endsWith (name form) "#")
+               (register-gensym form)
+               form)))
 
      (unquote? form) (second form)
      (unquote-splicing? form) (throw (ex-info "splice not in list"
@@ -780,7 +722,6 @@
     \^ read-meta                ;deprecated
     \' (wrapping-reader 'var)
     \( read-fn
-    \= read-eval
     \{ read-set
     \< (throwing-reader "Unreadable form")
     \" read-regex
@@ -788,6 +729,11 @@
     \_ read-discard
     \? read-cond
     nil))
+
+
+(defn emit-ctor [type ns record val]
+  (let [method (str ns "." (if (= :extended type) "map") "__GT_" (munge record))]
+    (js* "(cljs.core.apply.call(null, eval(~{}), ~{}))" method val)))
 
 (defn- read-ctor [rdr class-name opts pending-forms]
   (let [ns (namespace class-name)
@@ -802,7 +748,7 @@
       (let [entries (read-delimited end-ch rdr opts pending-forms)]
         (case form
           :short
-          (->ReadRecord ns record :short entries)
+          (emit-ctor :short ns record entries)
           :extended
           (let [vals (apply hash-map entries)]
             (loop [s (keys vals)]
@@ -810,7 +756,7 @@
                 (if-not (keyword? (first s))
                   (reader-error rdr "Unreadable ctor form: key must be of type cljs.core.Keyword")
                   (recur (next s)))))
-            (->ReadRecord ns record :extended vals))))
+            (emit-ctor :extended ns record [vals]))))
       (reader-error rdr "Invalid reader constructor form"))))
 
 (defn- read-tagged [rdr initch opts pending-forms]
@@ -831,24 +777,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public API
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(def ^:dynamic *read-eval*
-  "Defaults to true.
-
-   ***WARNING***
-   This setting implies that the full power of the reader is in play,
-   including syntax that can cause code to execute. It should never be
-   used with untrusted sources. See also: clojure.tools.reader.edn/read.
-
-   When set to logical false in the thread-local binding,
-   the eval reader (#=) and *record/type literal syntax* are disabled in read/load.
-   Example (will fail): (binding [*read-eval* false] (read-string \"#=(* 2 21)\"))
-
-   When set to :unknown all reads will fail in contexts where *read-eval*
-   has not been explicitly bound to either true or false. This setting
-   can be a useful diagnostic tool to ensure that all of your reads
-   occur in considered contexts."
-  true)
 
 (def ^:dynamic *data-readers*
   "Map from reader tag symbols to data reader Vars.
@@ -875,8 +803,6 @@
   ([reader eof-error? sentinel opts pending-forms]
    (read* reader eof-error? sentinel nil opts pending-forms))
   ([reader eof-error? sentinel return-on opts pending-forms]
-   (when (= :unknown *read-eval*)
-     (reader-error "Reading disallowed - *read-eval* bound to :unknown"))
    (try
      ((fn target []
         (log-source reader
@@ -931,10 +857,6 @@
     :eof - on eof, return value unless :eofthrow, then throw.
            if not specified, will throw
 
-   ***WARNING***
-   Note that read can execute code (controlled by *read-eval*),
-   and as such should be used only with trusted sources.
-
    To read data structures only, use clojure.tools.reader.edn/read
 
    Note that the function signature of clojure.tools.reader/read and
@@ -948,10 +870,6 @@
 (defn read-string
   "Reads one object from the string s.
    Returns nil when s is nil or empty.
-
-   ***WARNING***
-   Note that read-string can execute code (controlled by *read-eval*),
-   and as such should be used only with trusted sources.
 
    To read data structures only, use clojure.tools.reader.edn/read-string
 
