@@ -18,7 +18,7 @@
      get-line-number get-column-number get-file-name
      string-push-back-reader log-source]]
    [cljs.tools.reader.impl.utils :refer
-    [char ex-info? whitespace? numeric? desugar-meta next-id
+    [char ex-info? whitespace? numeric? desugar-meta next-id munge
      ReaderConditional reader-conditional reader-conditional?]]
    [cljs.tools.reader.impl.commons :refer
     [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
@@ -36,23 +36,6 @@
          ^:dynamic *default-data-reader-fn*
          ^:dynamic *suppress-read*
          default-data-readers)
-
-(defrecord ReadRecord [ns name form values])
-
-(extend-protocol IPrintWithWriter
-  ReadRecord
-  (-pr-writer [coll writer opts]
-    (let [{:keys [ns name form values]} coll
-          short? (= :short form)
-          start (str \# ns \. name " [")
-          end \]
-          values (if short? values (vals values))]
-      (pr-sequential-writer writer pr-writer start " " end opts values)))
-
-  TaggedLiteral
-  (-pr-writer [coll writer opts]
-    (-write writer (str \# (:tag coll) \space))
-    (-pr-writer (:form coll) writer opts)))
 
 (defn- macro-terminating? [ch]
   (case ch
@@ -754,6 +737,11 @@
     \? read-cond
     nil))
 
+
+(defn emit-ctor [type ns record val]
+  (let [method (str ns "." (if (= :extended type) "map") "__GT_" (munge record))]
+    (js* "(cljs.core.apply.call(null, eval(~{}), ~{}))" method val)))
+
 (defn- read-ctor [rdr class-name opts pending-forms]
   (let [ns (namespace class-name)
         ns-parts (string/split class-name #"[\./]")
@@ -767,7 +755,7 @@
       (let [entries (read-delimited end-ch rdr opts pending-forms)]
         (case form
           :short
-          (->ReadRecord ns record :short entries)
+          (emit-ctor :short ns record entries)
           :extended
           (let [vals (apply hash-map entries)]
             (loop [s (keys vals)]
@@ -775,7 +763,7 @@
                 (if-not (keyword? (first s))
                   (reader-error rdr "Unreadable ctor form: key must be of type cljs.core.Keyword")
                   (recur (next s)))))
-            (->ReadRecord ns record :extended vals))))
+            (emit-ctor :extended ns record [vals]))))
       (reader-error rdr "Invalid reader constructor form"))))
 
 (defn- read-tagged [rdr initch opts pending-forms]
