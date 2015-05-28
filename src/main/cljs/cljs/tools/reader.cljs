@@ -38,8 +38,6 @@
          ^:dynamic *suppress-read*
          default-data-readers)
 
-(defrecord UnresolvedSymbol [namespace name])
-
 (defrecord ReadRecord [ns name form values])
 
 (extend-protocol IPrintWithWriter
@@ -689,19 +687,10 @@
      (symbol? form)
      (list 'quote
            (if (namespace form)
-             (->UnresolvedSymbol (symbol (namespace form)) (symbol (name form)))
-             (let [sym (name form)]
-               (cond
-                 (goog.string/endsWith sym "#")
-                 (register-gensym form)
-
-                 (goog.string/startsWith sym ".")
-                 form
-
-                 (goog.string/endsWith sym ".")
-                 (->UnresolvedSymbol nil sym)
-
-                 :else (->UnresolvedSymbol nil form)))))
+             form
+             (if (goog.string/endsWith (name form) "#")
+               (register-gensym form)
+               form)))
 
      (unquote? form) (second form)
      (unquote-splicing? form) (throw (ex-info "splice not in list"
