@@ -38,7 +38,6 @@
          ^:dynamic *suppress-read*
          default-data-readers)
 
-(defrecord UnresolvedKeyword [namespace name])
 (defrecord UnresolvedSymbol [namespace name])
 (defrecord SyntaxQuotedForm [form])
 
@@ -369,16 +368,9 @@
   [reader initch opts pending-forms]
   (let [ch (read-char reader)]
     (if-not (whitespace? ch)
-      (let [token (read-token reader ch)
-            s (parse-symbol token)]
-        (if s
-          (let [ns (s 0)
-                name (s 1)]
-            (if (identical? \: (nth token 0))
-              (if ns
-                (->UnresolvedKeyword (subs ns 1) name)
-                (->UnresolvedKeyword nil (subs name 1)))
-              (keyword ns name)))
+      (let [token (read-token reader ch)]
+        (if-let [[ns name] (parse-symbol token)]
+          (keyword ns name)
           (reader-error reader "Invalid token: :" token)))
       (reader-error reader "Invalid token: :"))))
 
