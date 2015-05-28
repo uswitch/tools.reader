@@ -18,7 +18,7 @@
      get-line-number get-column-number get-file-name
      string-push-back-reader log-source]]
    [cljs.tools.reader.impl.utils :refer
-    [char ex-info? whitespace? numeric? desugar-meta next-id unbound?
+    [char ex-info? whitespace? numeric? desugar-meta next-id
      ReaderConditional reader-conditional reader-conditional?]]
    [cljs.tools.reader.impl.commons :refer
     [number-literal? read-past match-number parse-symbol read-comment throwing-reader]]
@@ -535,7 +535,7 @@
          (reader-error rdr "EOF while reading character"))))
     (reader-error rdr "EOF while reading character")))
 
-(def ^:private ^:dynamic arg-env)
+(def ^:private ^:dynamic arg-env nil)
 
 (defn- garg
   "Get a symbol for an anonymous ?argument?"
@@ -545,7 +545,7 @@
 
 (defn- read-fn
   [rdr _ opts pending-forms]
-  (if (unbound? #'arg-env)
+  (if arg-env
     (throw (ex-info "Nested #()s are not allowed" {:type :illegal-state})))
   (binding [arg-env (sorted-map)]
     (let [form (read* (doto rdr (unread \()) true nil opts pending-forms) ;; this sets bindings
@@ -567,7 +567,7 @@
 (defn- register-arg
   "Registers an argument to the arg-env"
   [n]
-  (if (unbound? #'arg-env)
+  (if arg-env
     (if-let [ret (arg-env n)]
       ret
       (let [g (garg n)]
@@ -580,7 +580,7 @@
 
 (defn- read-arg
   [rdr pct opts pending-forms]
-  (if-not (unbound? #'arg-env)
+  (if (nil? arg-env)
     (read-symbol rdr pct)
     (let [ch (peek-char rdr)]
       (cond

@@ -18,11 +18,6 @@
 (defn ex-info? [ex]
   (instance? cljs.core.ExceptionInfo ex))
 
-(defn unbound?
-  "Checks that all vars are not bound"
-  [& vars]
-  (not-any? #(undefined? (deref %)) vars))
-
 (defrecord ReaderConditional [splicing? form])
 
 (defn reader-conditional?
