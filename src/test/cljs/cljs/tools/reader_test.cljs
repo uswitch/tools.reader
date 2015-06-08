@@ -3,11 +3,12 @@
   (:require
     [cljs.test :as t :refer-macros [are deftest is run-tests testing]]
     [cljs.tools.reader :as reader :refer
-     [*data-readers* read-string]]
+     [*data-readers* *default-data-reader-fn* read-string]]
     [cljs.tools.reader.impl.utils
      :refer [reader-conditional reader-conditional?]
      :refer-macros [compile-if-cljs<3291]]
-    [cljs.tools.reader.reader-types :as rt]))
+    [cljs.tools.reader.reader-types :as rt]
+    [goog.string]))
 
 ;;==============================================================================
 ;; common_tests.clj
@@ -39,33 +40,7 @@
   (is (== 888 (js/parseInt "0888" 10) (read-string "0888")))
   (is (== -888 (js/parseInt "-0888" 10) (read-string "-0888")))
   (is (== 4984 (js/parseInt "04984" 10) (read-string "04984")))
-  (is (== -4984 (js/parseInt "-04984" 10) (read-string "-04984")))
-
-  (comment
-    ;;TODO: Do we want to enable binary numbers? It's an easy addition, and
-    ;; they are available in chrome already
-
-    ;;binary
-    (is (== 2147483648
-            (js/parseInt "10000000000000000000000000000000" 2)
-            (read-string "0b10000000000000000000000000000000")))
-    (is (== -2147483648
-            (js/parseInt "-10000000000000000000000000000000" 2)
-            (read-string "-0b10000000000000000000000000000000")))
-    (is (== 2139095040
-            (js/parseInt "01111111100000000000000000000000" 2)
-            (read-string "0b01111111100000000000000000000000")))
-    (is (== -2139095040
-            (js/parseInt "-01111111100000000000000000000000" 2)
-            (read-string "-0b01111111100000000000000000000000")))
-    (is (== 8388607
-            (js/parseInt "00000000011111111111111111111111" 2)
-            (read-string "0B00000000011111111111111111111111")))
-    (is (== -8388607
-            (js/parseInt "-00000000011111111111111111111111" 2)
-            (read-string "-0B00000000011111111111111111111111")))
-    )
-)
+  (is (== -4984 (js/parseInt "-04984" 10) (read-string "-04984"))))
 
 (deftest read-floating
   (is (== 42.23 (read-string "42.23")))
@@ -91,10 +66,10 @@
   (is (= 'abc:def/ghi:jkl.mno (read-string "abc:def/ghi:jkl.mno")))
   (is (instance? cljs.core/Symbol (read-string "alphabet")))
   (is (= "foo//" (str (read-string "foo//"))))
-  (is (js/isNaN (read-string "NaN"))) ;; not sure if this should be js/NaN
-  (is (= js/Number.POSITIVE_INFINITY (read-string "Infinity"))) ;; not sure if this should be js version of Infinity
-  (is (= js/Number.POSITIVE_INFINITY (read-string "+Infinity"))) ;; not sure if this should be js version of Infinity
-  (is (= js/Number.NEGATIVE_INFINITY (read-string "-Infinity")))) ;; not sure if this should be js version of Infinity
+  (is (js/isNaN (read-string "NaN")))
+  (is (= js/Number.POSITIVE_INFINITY (read-string "Infinity")))
+  (is (= js/Number.POSITIVE_INFINITY (read-string "+Infinity")))
+  (is (= js/Number.NEGATIVE_INFINITY (read-string "-Infinity"))))
 
 (deftest read-specials
   (is (= 'nil nil))
@@ -159,6 +134,8 @@
   (is (instance? cljs.core.Keyword (read-string ":alphabet"))))
 
 (deftest read-regex
+  (is (= (str #"(?i)abc")
+         (str (read-string "#\"(?i)abc\""))))
   (is (= (str #"\[\]?(\")\\")
          (str (read-string "#\"\\[\\]?(\\\")\\\\\"")))))
 
@@ -169,18 +146,11 @@
   (let [q (read-string "quote")]
     (is (= q (first (read-string "`foo"))))
     (is (= 'foo (second (read-string "`foo"))))
-
-    ;; (is (= () (eval (read-string "`(~@[])")))) ;;; no-eval
-
     (is (= q (first (read-string "`+"))))
     (is (= '+ (second (read-string "`+"))))
-
     (is (= q (first (read-string "`foo/bar"))))
     (is (= 'foo/bar (second (read-string "`foo/bar"))))
-
-    (is (= 1 (read-string "`1"))))
-  ;;;(is (= `(1 (~2 ~@'(3))) (eval (read-string "`(1 (~2 ~@'(3)))")))) ;;; no eval
-  )
+    (is (= 1 (read-string "`1")))))
 
 (deftest read-deref
   (is (= '@foo (read-string "@foo"))))
@@ -204,15 +174,11 @@
            (read-string "#inst \"2010-11-12T13:14:15.666\"")))
     (is (= #inst "2010-11-12T13:14:15.666"
            (read-string "#inst\"2010-11-12T13:14:15.666\"")))
-    ;; (is (= #uuid "550e8400-e29b-41d4-a716-446655440000"
-    ;;        (read-string "#uuid \"550e8400-e29b-41d4-a716-446655440000\"")))
-    ;; (is (= #uuid "550e8400-e29b-41d4-a716-446655440000"
-    ;;        (read-string "#uuid\"550e8400-e29b-41d4-a716-446655440000\"")))
     (is (= (uuid "550e8400-e29b-41d4-a716-446655440000")
            (read-string "#uuid \"550e8400-e29b-41d4-a716-446655440000\"")))
     (is (= (uuid "550e8400-e29b-41d4-a716-446655440000")
            (read-string "#uuid\"550e8400-e29b-41d4-a716-446655440000\"")))
-    #_(when *default-data-reader-fn*
+    (when *default-data-reader-fn*
       (let [my-unknown (fn [tag val] {:unknown-tag tag :value val})]
         (is (= {:unknown-tag 'foo :value 'bar}
                (binding [*default-data-reader-fn* my-unknown]

@@ -145,10 +145,6 @@
   (is (= #uuid "550e8400-e29b-41d4-a716-446655440000"
          (read-string {:readers data-readers}
                           "#uuid\"550e8400-e29b-41d4-a716-446655440000\"")))
-  ;; (is (= (java.util.UUID/fromString "550e8400-e29b-41d4-a716-446655440000")
-  ;;        (read-string "#uuid \"550e8400-e29b-41d4-a716-446655440000\"")))
-  ;; (is (= (java.util.UUID/fromString "550e8400-e29b-41d4-a716-446655440000")
-  ;;        (read-string "#uuid\"550e8400-e29b-41d4-a716-446655440000\"")))
   (let [my-unknown (fn [tag val] {:unknown-tag tag :value val})]
     (is (= {:unknown-tag 'foo :value 'bar}
            (read-string {:default my-unknown} "#foo bar")))))

@@ -31,6 +31,7 @@
                         :optimizations :whitespace}}
             {:id "simple"
              :source-paths ["src/main/cljs" "src/test/cljs"]
+             :notify-command ["node" "target/test/tests-simple.js"]
              :compiler {:optimizations :simple
                         :output-to "target/test/tests-simple.js"
                         :output-dir "target/test/out-simple"}}
