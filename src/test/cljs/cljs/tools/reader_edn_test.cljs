@@ -1,7 +1,8 @@
 (ns cljs.tools.reader-edn-test
   (:require
     [cljs.test :as t :refer-macros [deftest is run-tests]]
-    [cljs.tools.reader.edn :refer [read-string]]))
+    [cljs.tools.reader.edn :refer [read-string]]
+    [cljs.tools.reader.impl.utils :refer-macros [compile-if-cljs<3291]]))
 
 ;;==============================================================================
 ;; common_tests.clj
@@ -117,7 +118,7 @@
   (is (= {:tag 'String} (meta (read-string "^String 'x")))))
 
 (defn inst [s] (js/Date. s))
-(defn uuid [s] (cljs.core.UUID. s nil))
+(compile-if-cljs<3291 (defn uuid [s] (cljs.core.UUID. s nil)))
 
 (def data-readers {'inst inst 'uuid uuid})
 

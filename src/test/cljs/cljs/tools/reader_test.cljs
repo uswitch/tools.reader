@@ -4,7 +4,9 @@
     [cljs.test :as t :refer-macros [are deftest is run-tests testing]]
     [cljs.tools.reader :as reader :refer
      [*data-readers* read-string]]
-    [cljs.tools.reader.impl.utils :refer [reader-conditional reader-conditional?]]
+    [cljs.tools.reader.impl.utils
+     :refer [reader-conditional reader-conditional?]
+     :refer-macros [compile-if-cljs<3291]]
     [cljs.tools.reader.reader-types :as rt]))
 
 ;;==============================================================================
@@ -192,8 +194,9 @@
 (defn inst [s]
   (js/Date. s))
 
-(defn uuid [s]
-  (cljs.core.UUID. s nil))
+(compile-if-cljs<3291
+ (defn uuid [s]
+   (cljs.core.UUID. s nil)))
 
 (deftest read-tagged
   (binding [*data-readers* {'inst inst 'uuid uuid}]
@@ -215,8 +218,8 @@
                (binding [*default-data-reader-fn* my-unknown]
                  (read-string "#foo bar"))))))))
 
-(defrecord foo [])
-(defrecord bar [baz buz])
+(defrecord ^:export foo [])
+(defrecord ^:export bar [baz buz])
 
 (deftest read-record
   (is (= (foo.)

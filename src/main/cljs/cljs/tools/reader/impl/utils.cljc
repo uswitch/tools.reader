@@ -17,6 +17,10 @@
   (when (< cljs-build-number 3255)
     (cons 'do body)))
 
+(defmacro compile-if-cljs<3291 [& body]
+  (when (< cljs-build-number 3291)
+    (cons 'do body)))
+
 (defmacro compile-if-cljs<3308 [& body]
   (when (< cljs-build-number 3308)
     (cons 'do body)))
