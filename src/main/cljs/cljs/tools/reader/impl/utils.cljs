@@ -7,9 +7,13 @@
 ;;   You must not remove this notice, or any other, from this software.
 
 (ns cljs.tools.reader.impl.utils
-    (:refer-clojure :exclude [char])
-    (:require [clojure.string :as string]
-              [goog.string]))
+  (:refer-clojure :exclude [char])
+  (:require-macros
+   [cljs.tools.reader.impl.utils
+    :refer [compile-if-cljs<3255 compile-if-cljs<3308]])
+  (:require
+   [clojure.string :as string]
+   [goog.string]))
 
 (defn char [x]
   (when x
@@ -37,11 +41,56 @@
     (-write writer (str "#?" (when (:splicing? coll) "@")))
     (pr-writer (:form coll) writer opts)))
 
-(extend-protocol IPrintWithWriter
-  cljs.core.TaggedLiteral
-  (-pr-writer [o writer opts]
-    (-write writer (str "#" (:tag o) " "))
-    (pr-writer (:form o) writer opts)))
+(compile-if-cljs<3255
+
+ (deftype TaggedLiteral [tag form]
+
+   IEquiv
+   (-equiv [this other]
+     (and (instance? TaggedLiteral other)
+          (= tag (.-tag other))
+          (= form (.-form other))))
+
+   IHash
+   (-hash [this]
+     (+ (* 31 (hash tag))
+        (hash form)))
+
+   ILookup
+   (-lookup [this v]
+     (-lookup this v nil))
+   (-lookup [this v not-found]
+     (case v
+       :tag tag
+       :form form
+       not-found))
+
+)
+
+ (defn tagged-literal?
+  "Return true if the value is the data representation of a tagged literal"
+  [value]
+  (instance? cljs.core.TaggedLiteral value))
+
+ (defn tagged-literal
+  "Construct a data representation of a tagged literal from a
+  tag symbol and a form."
+  [tag form]
+  {:pre (symbol? tag)}
+  (cljs.core.TaggedLiteral. tag form))
+
+ )
+
+
+(compile-if-cljs<3308
+
+ (extend-protocol IPrintWithWriter
+   TaggedLiteral
+   (-pr-writer [o writer opts]
+     (-write writer (str "#" (:tag o) " "))
+     (pr-writer (:form o) writer opts)))
+
+ )
 
 (defn whitespace?
   "Checks whether a given character is whitespace"
