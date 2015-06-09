@@ -194,20 +194,22 @@
 (defonce ^:private READ_EOF (js/Object.))
 (defonce ^:private READ_FINISHED (js/Object.))
 
+(def ^:dynamic *read-delim* false)
 (defn- read-delimited
   "Reads and returns a collection ended with delim"
   [delim rdr opts pending-forms]
   (let [[start-line start-column] (starting-line-col-info rdr)
         delim (char delim)]
-    (loop [a (transient [])]
-      (let [form (read* rdr false READ_EOF delim opts pending-forms)]
-        (if (identical? form READ_FINISHED)
-          (persistent! a)
-          (if (identical? form READ_EOF)
-            (reader-error rdr "EOF while reading"
-                          (when start-line
-                            (str ", starting at line " start-line " and column " start-column)))
-            (recur (conj! a form))))))))
+    (binding [*read-delim* true]
+      (loop [a (transient [])]
+        (let [form (read* rdr false READ_EOF delim opts pending-forms)]
+          (if (identical? form READ_FINISHED)
+            (persistent! a)
+            (if (identical? form READ_EOF)
+              (reader-error rdr "EOF while reading"
+                            (when start-line
+                              (str ", starting at line " start-line " and column " start-column)))
+              (recur (conj! a form)))))))))
 
 (defn- read-list
   "Read in a list, including its location if the reader is an indexing reader"
@@ -485,18 +487,20 @@
     (throw (ex-info "Conditional read not allowed"
                     {:type :runtime-exception})))
   (if-let [ch (read-char rdr)]
-    (do
-      (let [splicing (= ch \@)
-           ch (if splicing (read-char rdr) ch)]
-       (if-let [ch (if (whitespace? ch) (read-past whitespace? rdr) ch)]
-         (if (not= ch \()
-           (throw (ex-info "read-cond body must be a list"
-                           {:type :runtime-exception}))
-           (binding [*suppress-read* (or *suppress-read* (= :preserve (:read-cond opts)))]
-             (if *suppress-read*
-               (reader-conditional (read-list rdr ch opts pending-forms) splicing)
-               (read-cond-delimited rdr splicing opts pending-forms))))
-         (reader-error rdr "EOF while reading character"))))
+    (let [splicing (= ch \@)
+          ch (if splicing (read-char rdr) ch)]
+      (when splicing
+        (when-not *read-delim*
+          (reader-error rdr "cond-splice not in list")))
+      (if-let [ch (if (whitespace? ch) (read-past whitespace? rdr) ch)]
+        (if (not= ch \()
+          (throw (ex-info "read-cond body must be a list"
+                          {:type :runtime-exception}))
+          (binding [*suppress-read* (or *suppress-read* (= :preserve (:read-cond opts)))]
+            (if *suppress-read*
+              (reader-conditional (read-list rdr ch opts pending-forms) splicing)
+              (read-cond-delimited rdr splicing opts pending-forms))))
+        (reader-error rdr "EOF while reading character")))
     (reader-error rdr "EOF while reading character")))
 
 (def ^:private ^:dynamic arg-env nil)
@@ -659,7 +663,7 @@
                form)))
 
      (unquote? form) (second form)
-     (unquote-splicing? form) (throw (ex-info "splice not in list"
+     (unquote-splicing? form) (throw (ex-info "unquote-splice not in list"
                                               {:type :illegal-state}))
 
      (coll? form)
