@@ -684,7 +684,6 @@
 
      (or (keyword? form)
          (number? form)
-         ;; (char? form) ;;; no char type in cljs
          (string? form)
          (nil? form)
          (bool? form)
@@ -708,7 +707,7 @@
     \' (wrapping-reader 'quote)
     \@ (wrapping-reader 'clojure.core/deref)
     \^ read-meta
-    \` read-syntax-quote ;;(wrapping-reader 'syntax-quote)
+    \` read-syntax-quote
     \~ read-unquote
     \( read-list
     \) read-unmatched-delimiter
@@ -723,7 +722,7 @@
 
 (defn- dispatch-macros [ch]
   (case ch
-    \^ read-meta                ;deprecated
+    \^ read-meta                ;; deprecated
     \' (wrapping-reader 'var)
     \( read-fn
     \{ read-set
@@ -866,7 +865,6 @@
    Note that the function signature of clojure.tools.reader/read and
    clojure.tools.reader.edn/read is not the same for eof-handling"
   {:arglists '([] [reader] [opts reader] [reader eof-error? eof-value])}
-  ;; ([] (read *in* true nil))
   ([reader] (read reader true nil))
   ([{eof :eof :as opts :or {eof :eofthrow}} reader] (read* reader (= eof :eofthrow) eof nil opts (to-array [])))
   ([reader eof-error? sentinel] (read* reader eof-error? sentinel nil {} (to-array []))))

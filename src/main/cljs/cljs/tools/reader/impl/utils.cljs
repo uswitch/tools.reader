@@ -41,7 +41,7 @@
     (-write writer (str "#?" (when (:splicing? coll) "@")))
     (pr-writer (:form coll) writer opts)))
 
-(compile-if-cljs<3255
+(compile-if-cljs<3255 ;; tagged literal support as from build 3255
 
  (deftype TaggedLiteral [tag form]
 
@@ -65,7 +65,7 @@
        :form form
        not-found))
 
-)
+   )
 
  (defn tagged-literal?
   "Return true if the value is the data representation of a tagged literal"
@@ -82,7 +82,7 @@
  )
 
 
-(compile-if-cljs<3308
+(compile-if-cljs<3308 ;; print writer for tagged literal from build 3308
 
  (extend-protocol IPrintWithWriter
    TaggedLiteral
@@ -107,7 +107,7 @@
            "\u001C"     ;;, U+001C FILE SEPARATOR.
            "\u001D"     ;;, U+001D GROUP SEPARATOR.
            "\u001E"     ;;, U+001E RECORD SEPARATOR.
-           "\u001F"]]  ;;, U+001F UNIT SEPARATOR
+           "\u001F"]]   ;;, U+001F UNIT SEPARATOR
       (some (partial identical? ch) white-chars))))
 
 (defn numeric?

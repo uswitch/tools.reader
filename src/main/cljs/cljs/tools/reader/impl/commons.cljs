@@ -72,8 +72,8 @@
         numerator (if (re-find #"^\+" numerator)
                     (subs numerator 1)
                     numerator)]
-    (/ (-> numerator   js/parseInt)
-       (-> denominator js/parseInt)))) ;;; No ratio type in cljs?
+    (/ (-> numerator   js/parseInt) ;;; No ratio type in cljs
+       (-> denominator js/parseInt)))); So will convert to js/Number
 
 (defn- match-float
   [s]

@@ -357,7 +357,6 @@
               When not supplied, only the default-data-readers will be used.
    :default - A function of two args, that will, if present and no reader is found for a tag,
               be called with the tag and the value."
-  ;; ([] (read *in*)) ;;; remove until node stdin is defined
   ([reader] (read {} reader))
   ([{:keys [eof] :as opts} reader]
      (let [eof-error? (not (contains? opts :eof))]
